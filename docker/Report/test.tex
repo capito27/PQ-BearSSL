@@ -1,0 +1,175 @@
+\documentclass[a4paper,12pt]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel} % If you write in French
+\usepackage{xcolor,graphicx}
+\usepackage[top=3.5cm,bottom=2.5cm,right=1.5cm,left=1.5cm,headheight=500pt]{geometry}
+\usepackage[lastpage,user]{zref}
+\usepackage{fancyhdr}
+\renewcommand{\headrulewidth}{0pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{Confidentiel (si non-confidentiel, laissez vide) \\}
+\fancyhead[L]{\includegraphics[]{heig.png}}
+
+\fancyfoot[R]{{\hrule \\[0.2cm]} Page \thepage{} sur \zpageref{LastPage}}
+\fancyfoot[L]{{\Large \\[0.2cm]}\\ \color{gray} Choississez un élément (?)}
+
+\fancypagestyle{firstpage}{%
+    \fancyhf{}
+    \lhead{\includegraphics[]{heig.png}}
+    \rhead{{Département\\[0.1cm]} {Filière\\[0.1cm]} {Orientation}}
+}
+
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\hspace*{\fill}\Huge \bfseries}
+\renewcommand{\cftaftertoctitle}{\hspace*{\fill}}
+
+\begin{document}
+
+\begin{titlepage}
+\thispagestyle{firstpage}
+\begin{center}
+
+ \vspace{1.5cm}
+
+{\huge \bfseries Travail de Bachelor \\[0.8cm] }
+{\large Titre du travail de bachelor \\[0.2cm] }
+{\large \bfseries (Non) Confidentiel}
+
+\vspace{1.0cm}
+
+\includegraphics[height=7.5cm]{sample.jpg} \\
+
+\vspace{1.2cm}
+
+\begin{tabular}{ll}
+\textbf{Étudiant :} & \textbf{Nom Prénom} \\[0.1cm]
+\textbf{Travail proposé par :} & Prénom Nom de la personne confiant l’étude \\[0.1cm]
+& Nom de l’entreprise/institution \\
+& Adresse \\
+& NPA Ville \\
+\textbf{Enseignant responsable :} & Prénom Nom \\[0.1cm]
+\textbf{Année académique} & 2019-2020 \\[0.1cm]
+\end{tabular}
+
+\vspace{2.0cm}
+
+\begin{flushright}
+    Yverdon-les-Bains, le \today
+\end{flushright}
+
+\end{center}
+
+\end{titlepage}
+
+\pagebreak
+
+\begin{flushright}
+    Département ...\\
+    Filière ...\\
+    Orientation ...\\
+    Étudiant {\color{gray}Nom Prénom}\\
+    Enseignant responsable {\color{gray}Nom Prénom}\\
+\end{flushright}
+
+\vspace{0.6cm}
+
+\begin{center}
+    {\large Travail de Bachelor {\color{gray} 2019-2020} \\[0.2cm]}
+    {\color{gray} Titre du travail de Bachelor \\[0.5cm]}
+\end{center}
+
+\hrule
+\vspace{0.5cm}
+
+{\noindent \color{gray} Nom de l'entreprise/institution \\[0.5cm]}
+
+{\noindent \bfseries Résumé publiable}\\[-0.4cm]
+
+{\noindent \color{gray} Titre du résumé publiable (?)\\[0.5cm]}
+
+\begin{tabular}{lll}
+    Étudiant : & Date et lieu : & Signature :  \\[0.3cm]
+    {\color{gray} Nom Prénom} & .......................................... &  .......................................... \\[0.8cm]
+    Enseignant responsable : & Date et lieu : & Signature :  \\[0.3cm]
+
+    {\color{gray} Nom Prénom} & .......................................... &  .......................................... \\[0.8cm]
+    Nom de l'entreprise/institution : & Date et lieu : & Signature :  \\[0.3cm]
+
+    {\color{gray} Nom Prénom de la personne} & .......................................... &  .......................................... \\
+    {\color{gray} confiant l'étude}
+\end{tabular}
+
+\pagebreak
+
+\textsc{\Large }\\[3cm]
+\begin{center}
+    {\huge \bfseries Préambule}
+    \vspace{1cm}
+\end{center}
+
+\noindent Ce travail de Bachelor (ci-après TB) est réalisé en fin de cursus d’études, en vue de l'obtention du titre de Bachelor of Science HES-SO en {\color{red} Ingénierie / Economie d’entreprise}. \\
+
+\noindent En tant que travail académique, son contenu, sans préjuger de sa valeur, n'engage ni la responsabilité de l'auteur, ni celles du jury du travail de Bachelor et de l'Ecole. \\
+
+\noindent Toute utilisation, même partielle, de ce TB doit être faite dans le respect du droit d’auteur. \\
+
+
+\begin{flushright}
+    \begin{minipage}{7cm}
+        \vspace{2cm}
+        HEIG-VD \\
+
+        \vspace{2cm}
+
+        Nom du doyen\\
+        Chef de département TIC
+    \end{minipage}\hfill
+\end{flushright}
+
+\vspace{3cm}
+
+Yverdon-les-Bains, le \today
+
+\pagebreak
+
+
+\begin{center}
+    \textsc{\Large }\\[3cm]
+    {\huge \bfseries Authentification}
+
+    \vspace{1cm}
+\end{center}
+
+\noindent Le soussigné, {\color{gray} Prénom Nom}, atteste par la présente avoir réalisé  ce travail et n’avoir utilisé aucune autre source que celles expressément mentionnées.
+
+\vspace{2cm}
+
+\noindent {\color{gray} Lieu}, le \today
+
+\vspace{3cm}
+
+\begin{flushright}
+    \begin{minipage}{7cm}
+        {\color{gray} Prénom Nom}
+    \end{minipage}\hfill
+\end{flushright}
+
+\pagebreak
+
+\tableofcontents
+\thispagestyle{fancy}
+
+\pagebreak
+
+\begin{center}
+    \textsc{\Large }\\[3cm]
+    {\huge \bfseries Bibliographie}
+
+    \vspace{1cm}
+\end{center}
+
+\end{document}
