@@ -26,11 +26,15 @@ OBJ = \
  $(OBJDIR)$Pec_c25519_i31$O \
  $(OBJDIR)$Pec_c25519_m15$O \
  $(OBJDIR)$Pec_c25519_m31$O \
+ $(OBJDIR)$Pec_c25519_m62$O \
+ $(OBJDIR)$Pec_c25519_m64$O \
  $(OBJDIR)$Pec_curve25519$O \
  $(OBJDIR)$Pec_default$O \
  $(OBJDIR)$Pec_keygen$O \
  $(OBJDIR)$Pec_p256_m15$O \
  $(OBJDIR)$Pec_p256_m31$O \
+ $(OBJDIR)$Pec_p256_m62$O \
+ $(OBJDIR)$Pec_p256_m64$O \
  $(OBJDIR)$Pec_prime_i15$O \
  $(OBJDIR)$Pec_prime_i31$O \
  $(OBJDIR)$Pec_pubkey$O \
@@ -124,6 +128,7 @@ OBJ = \
  $(OBJDIR)$Pi32_tmont$O \
  $(OBJDIR)$Pi62_modpow2$O \
  $(OBJDIR)$Phkdf$O \
+ $(OBJDIR)$Pshake$O \
  $(OBJDIR)$Phmac$O \
  $(OBJDIR)$Phmac_ct$O \
  $(OBJDIR)$Paesctr_drbg$O \
@@ -137,6 +142,8 @@ OBJ = \
  $(OBJDIR)$Prsa_default_pkcs1_vrfy$O \
  $(OBJDIR)$Prsa_default_priv$O \
  $(OBJDIR)$Prsa_default_privexp$O \
+ $(OBJDIR)$Prsa_default_pss_sign$O \
+ $(OBJDIR)$Prsa_default_pss_vrfy$O \
  $(OBJDIR)$Prsa_default_pub$O \
  $(OBJDIR)$Prsa_default_pubexp$O \
  $(OBJDIR)$Prsa_i15_keygen$O \
@@ -147,6 +154,8 @@ OBJ = \
  $(OBJDIR)$Prsa_i15_pkcs1_vrfy$O \
  $(OBJDIR)$Prsa_i15_priv$O \
  $(OBJDIR)$Prsa_i15_privexp$O \
+ $(OBJDIR)$Prsa_i15_pss_sign$O \
+ $(OBJDIR)$Prsa_i15_pss_vrfy$O \
  $(OBJDIR)$Prsa_i15_pub$O \
  $(OBJDIR)$Prsa_i15_pubexp$O \
  $(OBJDIR)$Prsa_i31_keygen$O \
@@ -158,6 +167,8 @@ OBJ = \
  $(OBJDIR)$Prsa_i31_pkcs1_vrfy$O \
  $(OBJDIR)$Prsa_i31_priv$O \
  $(OBJDIR)$Prsa_i31_privexp$O \
+ $(OBJDIR)$Prsa_i31_pss_sign$O \
+ $(OBJDIR)$Prsa_i31_pss_vrfy$O \
  $(OBJDIR)$Prsa_i31_pub$O \
  $(OBJDIR)$Prsa_i31_pubexp$O \
  $(OBJDIR)$Prsa_i32_oaep_decrypt$O \
@@ -165,6 +176,8 @@ OBJ = \
  $(OBJDIR)$Prsa_i32_pkcs1_sign$O \
  $(OBJDIR)$Prsa_i32_pkcs1_vrfy$O \
  $(OBJDIR)$Prsa_i32_priv$O \
+ $(OBJDIR)$Prsa_i32_pss_sign$O \
+ $(OBJDIR)$Prsa_i32_pss_vrfy$O \
  $(OBJDIR)$Prsa_i32_pub$O \
  $(OBJDIR)$Prsa_i62_keygen$O \
  $(OBJDIR)$Prsa_i62_oaep_decrypt$O \
@@ -172,11 +185,15 @@ OBJ = \
  $(OBJDIR)$Prsa_i62_pkcs1_sign$O \
  $(OBJDIR)$Prsa_i62_pkcs1_vrfy$O \
  $(OBJDIR)$Prsa_i62_priv$O \
+ $(OBJDIR)$Prsa_i62_pss_sign$O \
+ $(OBJDIR)$Prsa_i62_pss_vrfy$O \
  $(OBJDIR)$Prsa_i62_pub$O \
  $(OBJDIR)$Prsa_oaep_pad$O \
  $(OBJDIR)$Prsa_oaep_unpad$O \
  $(OBJDIR)$Prsa_pkcs1_sig_pad$O \
  $(OBJDIR)$Prsa_pkcs1_sig_unpad$O \
+ $(OBJDIR)$Prsa_pss_sig_pad$O \
+ $(OBJDIR)$Prsa_pss_sig_unpad$O \
  $(OBJDIR)$Prsa_ssl_decrypt$O \
  $(OBJDIR)$Pprf$O \
  $(OBJDIR)$Pprf_md5sha1$O \
@@ -433,6 +450,12 @@ $(OBJDIR)$Pec_c25519_m15$O: src$Pec$Pec_c25519_m15.c $(HEADERSPRIV)
 $(OBJDIR)$Pec_c25519_m31$O: src$Pec$Pec_c25519_m31.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_c25519_m31$O src$Pec$Pec_c25519_m31.c
 
+$(OBJDIR)$Pec_c25519_m62$O: src$Pec$Pec_c25519_m62.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_c25519_m62$O src$Pec$Pec_c25519_m62.c
+
+$(OBJDIR)$Pec_c25519_m64$O: src$Pec$Pec_c25519_m64.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_c25519_m64$O src$Pec$Pec_c25519_m64.c
+
 $(OBJDIR)$Pec_curve25519$O: src$Pec$Pec_curve25519.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_curve25519$O src$Pec$Pec_curve25519.c
 
@@ -447,6 +470,12 @@ $(OBJDIR)$Pec_p256_m15$O: src$Pec$Pec_p256_m15.c $(HEADERSPRIV)
 
 $(OBJDIR)$Pec_p256_m31$O: src$Pec$Pec_p256_m31.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_p256_m31$O src$Pec$Pec_p256_m31.c
+
+$(OBJDIR)$Pec_p256_m62$O: src$Pec$Pec_p256_m62.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_p256_m62$O src$Pec$Pec_p256_m62.c
+
+$(OBJDIR)$Pec_p256_m64$O: src$Pec$Pec_p256_m64.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_p256_m64$O src$Pec$Pec_p256_m64.c
 
 $(OBJDIR)$Pec_prime_i15$O: src$Pec$Pec_prime_i15.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_prime_i15$O src$Pec$Pec_prime_i15.c
@@ -727,6 +756,9 @@ $(OBJDIR)$Pi62_modpow2$O: src$Pint$Pi62_modpow2.c $(HEADERSPRIV)
 $(OBJDIR)$Phkdf$O: src$Pkdf$Phkdf.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Phkdf$O src$Pkdf$Phkdf.c
 
+$(OBJDIR)$Pshake$O: src$Pkdf$Pshake.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pshake$O src$Pkdf$Pshake.c
+
 $(OBJDIR)$Phmac$O: src$Pmac$Phmac.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Phmac$O src$Pmac$Phmac.c
 
@@ -766,6 +798,12 @@ $(OBJDIR)$Prsa_default_priv$O: src$Prsa$Prsa_default_priv.c $(HEADERSPRIV)
 $(OBJDIR)$Prsa_default_privexp$O: src$Prsa$Prsa_default_privexp.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_default_privexp$O src$Prsa$Prsa_default_privexp.c
 
+$(OBJDIR)$Prsa_default_pss_sign$O: src$Prsa$Prsa_default_pss_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_default_pss_sign$O src$Prsa$Prsa_default_pss_sign.c
+
+$(OBJDIR)$Prsa_default_pss_vrfy$O: src$Prsa$Prsa_default_pss_vrfy.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_default_pss_vrfy$O src$Prsa$Prsa_default_pss_vrfy.c
+
 $(OBJDIR)$Prsa_default_pub$O: src$Prsa$Prsa_default_pub.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_default_pub$O src$Prsa$Prsa_default_pub.c
 
@@ -795,6 +833,12 @@ $(OBJDIR)$Prsa_i15_priv$O: src$Prsa$Prsa_i15_priv.c $(HEADERSPRIV)
 
 $(OBJDIR)$Prsa_i15_privexp$O: src$Prsa$Prsa_i15_privexp.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i15_privexp$O src$Prsa$Prsa_i15_privexp.c
+
+$(OBJDIR)$Prsa_i15_pss_sign$O: src$Prsa$Prsa_i15_pss_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i15_pss_sign$O src$Prsa$Prsa_i15_pss_sign.c
+
+$(OBJDIR)$Prsa_i15_pss_vrfy$O: src$Prsa$Prsa_i15_pss_vrfy.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i15_pss_vrfy$O src$Prsa$Prsa_i15_pss_vrfy.c
 
 $(OBJDIR)$Prsa_i15_pub$O: src$Prsa$Prsa_i15_pub.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i15_pub$O src$Prsa$Prsa_i15_pub.c
@@ -829,6 +873,12 @@ $(OBJDIR)$Prsa_i31_priv$O: src$Prsa$Prsa_i31_priv.c $(HEADERSPRIV)
 $(OBJDIR)$Prsa_i31_privexp$O: src$Prsa$Prsa_i31_privexp.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i31_privexp$O src$Prsa$Prsa_i31_privexp.c
 
+$(OBJDIR)$Prsa_i31_pss_sign$O: src$Prsa$Prsa_i31_pss_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i31_pss_sign$O src$Prsa$Prsa_i31_pss_sign.c
+
+$(OBJDIR)$Prsa_i31_pss_vrfy$O: src$Prsa$Prsa_i31_pss_vrfy.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i31_pss_vrfy$O src$Prsa$Prsa_i31_pss_vrfy.c
+
 $(OBJDIR)$Prsa_i31_pub$O: src$Prsa$Prsa_i31_pub.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i31_pub$O src$Prsa$Prsa_i31_pub.c
 
@@ -849,6 +899,12 @@ $(OBJDIR)$Prsa_i32_pkcs1_vrfy$O: src$Prsa$Prsa_i32_pkcs1_vrfy.c $(HEADERSPRIV)
 
 $(OBJDIR)$Prsa_i32_priv$O: src$Prsa$Prsa_i32_priv.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i32_priv$O src$Prsa$Prsa_i32_priv.c
+
+$(OBJDIR)$Prsa_i32_pss_sign$O: src$Prsa$Prsa_i32_pss_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i32_pss_sign$O src$Prsa$Prsa_i32_pss_sign.c
+
+$(OBJDIR)$Prsa_i32_pss_vrfy$O: src$Prsa$Prsa_i32_pss_vrfy.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i32_pss_vrfy$O src$Prsa$Prsa_i32_pss_vrfy.c
 
 $(OBJDIR)$Prsa_i32_pub$O: src$Prsa$Prsa_i32_pub.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i32_pub$O src$Prsa$Prsa_i32_pub.c
@@ -871,6 +927,12 @@ $(OBJDIR)$Prsa_i62_pkcs1_vrfy$O: src$Prsa$Prsa_i62_pkcs1_vrfy.c $(HEADERSPRIV)
 $(OBJDIR)$Prsa_i62_priv$O: src$Prsa$Prsa_i62_priv.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i62_priv$O src$Prsa$Prsa_i62_priv.c
 
+$(OBJDIR)$Prsa_i62_pss_sign$O: src$Prsa$Prsa_i62_pss_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i62_pss_sign$O src$Prsa$Prsa_i62_pss_sign.c
+
+$(OBJDIR)$Prsa_i62_pss_vrfy$O: src$Prsa$Prsa_i62_pss_vrfy.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i62_pss_vrfy$O src$Prsa$Prsa_i62_pss_vrfy.c
+
 $(OBJDIR)$Prsa_i62_pub$O: src$Prsa$Prsa_i62_pub.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_i62_pub$O src$Prsa$Prsa_i62_pub.c
 
@@ -885,6 +947,12 @@ $(OBJDIR)$Prsa_pkcs1_sig_pad$O: src$Prsa$Prsa_pkcs1_sig_pad.c $(HEADERSPRIV)
 
 $(OBJDIR)$Prsa_pkcs1_sig_unpad$O: src$Prsa$Prsa_pkcs1_sig_unpad.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_pkcs1_sig_unpad$O src$Prsa$Prsa_pkcs1_sig_unpad.c
+
+$(OBJDIR)$Prsa_pss_sig_pad$O: src$Prsa$Prsa_pss_sig_pad.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_pss_sig_pad$O src$Prsa$Prsa_pss_sig_pad.c
+
+$(OBJDIR)$Prsa_pss_sig_unpad$O: src$Prsa$Prsa_pss_sig_unpad.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_pss_sig_unpad$O src$Prsa$Prsa_pss_sig_unpad.c
 
 $(OBJDIR)$Prsa_ssl_decrypt$O: src$Prsa$Prsa_ssl_decrypt.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_ssl_decrypt$O src$Prsa$Prsa_ssl_decrypt.c

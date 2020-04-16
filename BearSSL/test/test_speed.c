@@ -532,6 +532,83 @@ SPEED_EAX(AES, aes, 256, ct64)
 SPEED_EAX(AES, aes, 256, x86ni)
 SPEED_EAX(AES, aes, 256, pwr8)
 
+static void
+test_speed_shake_inner(int security_level)
+{
+	unsigned char buf[8192];
+	br_shake_context sc;
+	int i;
+	long num;
+
+	memset(buf, 'D', sizeof buf);
+	br_shake_init(&sc, security_level);
+	for (i = 0; i < 10; i ++) {
+		br_shake_inject(&sc, buf, sizeof buf);
+	}
+	num = 10;
+	for (;;) {
+		clock_t begin, end;
+		double tt;
+		long k;
+
+		begin = clock();
+		for (k = num; k > 0; k --) {
+			br_shake_inject(&sc, buf, sizeof buf);
+		}
+		end = clock();
+		tt = (double)(end - begin) / CLOCKS_PER_SEC;
+		if (tt >= 2.0) {
+			printf("SHAKE%-3d (inject)              %8.2f MB/s\n",
+				security_level,
+				((double)sizeof buf) * (double)num
+				/ (tt * 1000000.0));
+			fflush(stdout);
+			break;
+		}
+		num <<= 1;
+	}
+
+	br_shake_flip(&sc);
+	for (i = 0; i < 10; i ++) {
+		br_shake_produce(&sc, buf, sizeof buf);
+	}
+
+	num = 10;
+	for (;;) {
+		clock_t begin, end;
+		double tt;
+		long k;
+
+		begin = clock();
+		for (k = num; k > 0; k --) {
+			br_shake_produce(&sc, buf, sizeof buf);
+		}
+		end = clock();
+		tt = (double)(end - begin) / CLOCKS_PER_SEC;
+		if (tt >= 2.0) {
+			printf("SHAKE%-3d (produce)             %8.2f MB/s\n",
+				security_level,
+				((double)sizeof buf) * (double)num
+				/ (tt * 1000000.0));
+			fflush(stdout);
+			break;
+		}
+		num <<= 1;
+	}
+}
+
+static void
+test_speed_shake128(void)
+{
+	test_speed_shake_inner(128);
+}
+
+static void
+test_speed_shake256(void)
+{
+	test_speed_shake_inner(256);
+}
+
 static const unsigned char RSA_N[] = {
 	0xE9, 0xF2, 0x4A, 0x2F, 0x96, 0xDF, 0x0A, 0x23,
 	0x01, 0x85, 0xF1, 0x2C, 0xB2, 0xA8, 0xEF, 0x23,
@@ -962,6 +1039,32 @@ test_speed_ec_p256_m31(void)
 }
 
 static void
+test_speed_ec_p256_m62(void)
+{
+	const br_ec_impl *ec;
+
+	ec = br_ec_p256_m62_get();
+	if (ec != NULL) {
+		test_speed_ec_inner("EC p256_m62", ec, &br_secp256r1);
+	} else {
+		printf("%-30s UNAVAILABLE\n", "EC p256_m62");
+	}
+}
+
+static void
+test_speed_ec_p256_m64(void)
+{
+	const br_ec_impl *ec;
+
+	ec = br_ec_p256_m64_get();
+	if (ec != NULL) {
+		test_speed_ec_inner("EC p256_m64", ec, &br_secp256r1);
+	} else {
+		printf("%-30s UNAVAILABLE\n", "EC p256_m64");
+	}
+}
+
+static void
 test_speed_ec_prime_i15(void)
 {
 	test_speed_ec_inner("EC prime_i15 P-256",
@@ -1009,6 +1112,32 @@ test_speed_ec_c25519_m31(void)
 {
 	test_speed_ec_inner("EC c25519_m31",
 		&br_ec_c25519_m31, &br_curve25519);
+}
+
+static void
+test_speed_ec_c25519_m62(void)
+{
+	const br_ec_impl *ec;
+
+	ec = br_ec_c25519_m62_get();
+	if (ec != NULL) {
+		test_speed_ec_inner("EC c25519_m62", ec, &br_curve25519);
+	} else {
+		printf("%-30s UNAVAILABLE\n", "EC c25519_m62");
+	}
+}
+
+static void
+test_speed_ec_c25519_m64(void)
+{
+	const br_ec_impl *ec;
+
+	ec = br_ec_c25519_m64_get();
+	if (ec != NULL) {
+		test_speed_ec_inner("EC c25519_m64", ec, &br_curve25519);
+	} else {
+		printf("%-30s UNAVAILABLE\n", "EC c25519_m64");
+	}
 }
 
 static void
@@ -1115,6 +1244,38 @@ test_speed_ecdsa_p256_m31(void)
 }
 
 static void
+test_speed_ecdsa_p256_m62(void)
+{
+	const br_ec_impl *ec;
+
+	ec = br_ec_p256_m62_get();
+	if (ec != NULL) {
+		test_speed_ecdsa_inner("ECDSA m62 P-256",
+			ec, &br_secp256r1,
+			&br_ecdsa_i31_sign_asn1,
+			&br_ecdsa_i31_vrfy_asn1);
+	} else {
+		printf("%-30s UNAVAILABLE\n", "ECDSA m62 P-256");
+	}
+}
+
+static void
+test_speed_ecdsa_p256_m64(void)
+{
+	const br_ec_impl *ec;
+
+	ec = br_ec_p256_m64_get();
+	if (ec != NULL) {
+		test_speed_ecdsa_inner("ECDSA m64 P-256",
+			ec, &br_secp256r1,
+			&br_ecdsa_i31_sign_asn1,
+			&br_ecdsa_i31_vrfy_asn1);
+	} else {
+		printf("%-30s UNAVAILABLE\n", "ECDSA m64 P-256");
+	}
+}
+
+static void
 test_speed_ecdsa_i15(void)
 {
 	test_speed_ecdsa_inner("ECDSA i15 P-256",
@@ -1152,14 +1313,20 @@ static void
 test_speed_i31(void)
 {
 	static const unsigned char bp[] = {
-		0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
+		/* A 521-bit prime integer (order of the P-521 curve). */
+		0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84,
-		0xF3, 0xB9, 0xCA, 0xC2, 0xFC, 0x63, 0x25, 0x51
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFA, 0x51, 0x86, 0x87, 0x83, 0xBF, 0x2F,
+		0x96, 0x6B, 0x7F, 0xCC, 0x01, 0x48, 0xF7, 0x09,
+		0xA5, 0xD0, 0x3B, 0xB5, 0xC9, 0xB8, 0x89, 0x9C,
+		0x47, 0xAE, 0xBB, 0x6F, 0xB7, 0x1E, 0x91, 0x38,
+		0x64, 0x09
 	};
 
 	unsigned char tmp[60 + sizeof bp];
-	uint32_t p[10], x[10], y[10], z[10], p0i;
+	uint32_t p[20], x[20], y[20], z[20], uu[60], p0i;
 	int i;
 	long num;
 
@@ -1235,6 +1402,30 @@ test_speed_i31(void)
 		tt = (double)(end - begin) / CLOCKS_PER_SEC;
 		if (tt >= 2.0) {
 			printf("%-30s %8.2f ops/s\n", "i31 montymul",
+				(double)num / tt);
+			fflush(stdout);
+			break;
+		}
+		num <<= 1;
+	}
+
+	for (i = 0; i < 10; i ++) {
+		br_i31_moddiv(x, y, p, p0i, uu);
+	}
+	num = 10;
+	for (;;) {
+		clock_t begin, end;
+		double tt;
+		long k;
+
+		begin = clock();
+		for (k = num; k > 0; k --) {
+			br_i31_moddiv(x, y, p, p0i, uu);
+		}
+		end = clock();
+		tt = (double)(end - begin) / CLOCKS_PER_SEC;
+		if (tt >= 2.0) {
+			printf("%-30s %8.2f ops/s\n", "i31 moddiv",
 				(double)num / tt);
 			fflush(stdout);
 			break;
@@ -1484,6 +1675,9 @@ static const struct {
 	STU(eax_aes192_pwr8),
 	STU(eax_aes256_pwr8),
 
+	STU(shake128),
+	STU(shake256),
+
 	STU(rsa_i15),
 	STU(rsa_i31),
 	STU(rsa_i32),
@@ -1492,12 +1686,18 @@ static const struct {
 	STU(ec_prime_i31),
 	STU(ec_p256_m15),
 	STU(ec_p256_m31),
+	STU(ec_p256_m62),
+	STU(ec_p256_m64),
 	STU(ec_c25519_i15),
 	STU(ec_c25519_i31),
 	STU(ec_c25519_m15),
 	STU(ec_c25519_m31),
+	STU(ec_c25519_m62),
+	STU(ec_c25519_m64),
 	STU(ecdsa_p256_m15),
 	STU(ecdsa_p256_m31),
+	STU(ecdsa_p256_m62),
+	STU(ecdsa_p256_m64),
 	STU(ecdsa_i15),
 	STU(ecdsa_i31),
 
