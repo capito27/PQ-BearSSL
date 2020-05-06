@@ -28,6 +28,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// TODO include kyber to layout list
 /** \mainpage BearSSL API
  *
  * # API Layout
@@ -127,6 +128,7 @@
 #include "bearssl_hash.h"
 #include "bearssl_hmac.h"
 #include "bearssl_kdf.h"
+#include "bearssl_kyber.h"
 #include "bearssl_rand.h"
 #include "bearssl_prf.h"
 #include "bearssl_block.h"

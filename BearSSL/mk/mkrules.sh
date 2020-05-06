@@ -68,6 +68,18 @@ coresrc=" \
 	src/codec/enc64le.c \
 	src/codec/pemdec.c \
 	src/codec/pemenc.c \
+	src/crystals/kyber_default_decrypt.c \
+	src/crystals/kyber_default_encrypt.c \
+	src/crystals/kyber_default_keygen.c \
+	src/crystals/kyber_third_party_decrypt.c \
+	src/crystals/kyber_third_party_encrypt.c \
+	src/crystals/kyber_third_party_keygen.c \
+	src/crystals/ThirdParty/common_ntt.c \
+	src/crystals/ThirdParty/common_poly.c \
+	src/crystals/ThirdParty/common_polyvec.c \
+	src/crystals/ThirdParty/kyber_cbd.c \
+	src/crystals/ThirdParty/kyber_reduce.c \
+	src/crystals/ThirdParty/tiny_sha3.c \
 	src/ec/ec_all_m15.c \
 	src/ec/ec_all_m31.c \
 	src/ec/ec_c25519_i15.c \
@@ -385,6 +397,7 @@ headerspub=" \
 	inc/bearssl_hash.h \
 	inc/bearssl_hmac.h \
 	inc/bearssl_kdf.h \
+	inc/bearssl_kyber.h \
 	inc/bearssl_pem.h \
 	inc/bearssl_prf.h \
 	inc/bearssl_rand.h \

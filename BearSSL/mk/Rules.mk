@@ -20,6 +20,18 @@ OBJ = \
  $(OBJDIR)$Penc64le$O \
  $(OBJDIR)$Ppemdec$O \
  $(OBJDIR)$Ppemenc$O \
+ $(OBJDIR)$Pkyber_default_decrypt$O \
+ $(OBJDIR)$Pkyber_default_encrypt$O \
+ $(OBJDIR)$Pkyber_default_keygen$O \
+ $(OBJDIR)$Pkyber_third_party_decrypt$O \
+ $(OBJDIR)$Pkyber_third_party_encrypt$O \
+ $(OBJDIR)$Pkyber_third_party_keygen$O \
+ $(OBJDIR)$Pcommon_ntt$O \
+ $(OBJDIR)$Pcommon_poly$O \
+ $(OBJDIR)$Pcommon_polyvec$O \
+ $(OBJDIR)$Pkyber_cbd$O \
+ $(OBJDIR)$Pkyber_reduce$O \
+ $(OBJDIR)$Ptiny_sha3$O \
  $(OBJDIR)$Pec_all_m15$O \
  $(OBJDIR)$Pec_all_m31$O \
  $(OBJDIR)$Pec_c25519_i15$O \
@@ -319,7 +331,7 @@ OBJTESTSPEED = \
  $(OBJDIR)$Ptest_speed$O
 OBJTESTX509 = \
  $(OBJDIR)$Ptest_x509$O
-HEADERSPUB = inc$Pbearssl.h inc$Pbearssl_aead.h inc$Pbearssl_block.h inc$Pbearssl_ec.h inc$Pbearssl_hash.h inc$Pbearssl_hmac.h inc$Pbearssl_kdf.h inc$Pbearssl_pem.h inc$Pbearssl_prf.h inc$Pbearssl_rand.h inc$Pbearssl_rsa.h inc$Pbearssl_ssl.h inc$Pbearssl_x509.h
+HEADERSPUB = inc$Pbearssl.h inc$Pbearssl_aead.h inc$Pbearssl_block.h inc$Pbearssl_ec.h inc$Pbearssl_hash.h inc$Pbearssl_hmac.h inc$Pbearssl_kdf.h inc$Pbearssl_kyber.h inc$Pbearssl_pem.h inc$Pbearssl_prf.h inc$Pbearssl_rand.h inc$Pbearssl_rsa.h inc$Pbearssl_ssl.h inc$Pbearssl_x509.h
 HEADERSPRIV = $(HEADERSPUB) src$Pconfig.h src$Pinner.h
 HEADERSTOOLS = $(HEADERSPUB) tools$Pbrssl.h
 T0SRC = T0$PBlobWriter.cs T0$PCPU.cs T0$PCodeElement.cs T0$PCodeElementJump.cs T0$PCodeElementUInt.cs T0$PCodeElementUIntExpr.cs T0$PCodeElementUIntInt.cs T0$PCodeElementUIntUInt.cs T0$PConstData.cs T0$POpcode.cs T0$POpcodeCall.cs T0$POpcodeConst.cs T0$POpcodeGetLocal.cs T0$POpcodeJump.cs T0$POpcodeJumpIf.cs T0$POpcodeJumpIfNot.cs T0$POpcodeJumpUncond.cs T0$POpcodePutLocal.cs T0$POpcodeRet.cs T0$PSType.cs T0$PT0Comp.cs T0$PTPointerBase.cs T0$PTPointerBlob.cs T0$PTPointerExpr.cs T0$PTPointerNull.cs T0$PTPointerXT.cs T0$PTValue.cs T0$PWord.cs T0$PWordBuilder.cs T0$PWordData.cs T0$PWordInterpreted.cs T0$PWordNative.cs
@@ -431,6 +443,42 @@ $(OBJDIR)$Ppemdec$O: src$Pcodec$Ppemdec.c $(HEADERSPRIV)
 
 $(OBJDIR)$Ppemenc$O: src$Pcodec$Ppemenc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ppemenc$O src$Pcodec$Ppemenc.c
+
+$(OBJDIR)$Pkyber_default_decrypt$O: src$Pcrystals$Pkyber_default_decrypt.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_default_decrypt$O src$Pcrystals$Pkyber_default_decrypt.c
+
+$(OBJDIR)$Pkyber_default_encrypt$O: src$Pcrystals$Pkyber_default_encrypt.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_default_encrypt$O src$Pcrystals$Pkyber_default_encrypt.c
+
+$(OBJDIR)$Pkyber_default_keygen$O: src$Pcrystals$Pkyber_default_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_default_keygen$O src$Pcrystals$Pkyber_default_keygen.c
+
+$(OBJDIR)$Pkyber_third_party_decrypt$O: src$Pcrystals$Pkyber_third_party_decrypt.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_third_party_decrypt$O src$Pcrystals$Pkyber_third_party_decrypt.c
+
+$(OBJDIR)$Pkyber_third_party_encrypt$O: src$Pcrystals$Pkyber_third_party_encrypt.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_third_party_encrypt$O src$Pcrystals$Pkyber_third_party_encrypt.c
+
+$(OBJDIR)$Pkyber_third_party_keygen$O: src$Pcrystals$Pkyber_third_party_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_third_party_keygen$O src$Pcrystals$Pkyber_third_party_keygen.c
+
+$(OBJDIR)$Pcommon_ntt$O: src$Pcrystals$PThirdParty$Pcommon_ntt.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcommon_ntt$O src$Pcrystals$PThirdParty$Pcommon_ntt.c
+
+$(OBJDIR)$Pcommon_poly$O: src$Pcrystals$PThirdParty$Pcommon_poly.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcommon_poly$O src$Pcrystals$PThirdParty$Pcommon_poly.c
+
+$(OBJDIR)$Pcommon_polyvec$O: src$Pcrystals$PThirdParty$Pcommon_polyvec.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcommon_polyvec$O src$Pcrystals$PThirdParty$Pcommon_polyvec.c
+
+$(OBJDIR)$Pkyber_cbd$O: src$Pcrystals$PThirdParty$Pkyber_cbd.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_cbd$O src$Pcrystals$PThirdParty$Pkyber_cbd.c
+
+$(OBJDIR)$Pkyber_reduce$O: src$Pcrystals$PThirdParty$Pkyber_reduce.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_reduce$O src$Pcrystals$PThirdParty$Pkyber_reduce.c
+
+$(OBJDIR)$Ptiny_sha3$O: src$Pcrystals$PThirdParty$Ptiny_sha3.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ptiny_sha3$O src$Pcrystals$PThirdParty$Ptiny_sha3.c
 
 $(OBJDIR)$Pec_all_m15$O: src$Pec$Pec_all_m15.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_all_m15$O src$Pec$Pec_all_m15.c
