@@ -581,7 +581,7 @@ test_speed_shake_inner(int security_level) {
         num <<= 1;
     }
 
-    br_shake_flip(&sc);
+    br_shake_flip(&sc, 0);
     for (i = 0; i < 10; i++) {
         br_shake_produce(&sc, buf, sizeof buf);
     }
@@ -1294,12 +1294,171 @@ test_speed_ecdsa_i31(void) {
 }
 
 static void
+test_speed_dilithium_inner(char *name,
+                       br_dilithium_sign sign, br_dilithium_verify verify, br_dilithium_keygen kgen, unsigned mode) {
+    unsigned char sig[BR_DILITHIUM_SIGNATURE_SIZE(mode)];
+    char const *msg = "THIS IS A DILITHIUM TEST SIGN MESSAGE";
+    unsigned char kbuf_priv[BR_DILITHIUM_SECRET_BUFF_SIZE(mode)];
+    unsigned char kbuf_pub[BR_DILITHIUM_PUBLIC_BUFF_SIZE(mode)];
+    long num;
+    br_dilithium_private_key sk;
+    br_dilithium_public_key pk;
+
+    br_aesctr_drbg_context rng;
+    const br_block_ctr_class *ictr;
+
+    ictr = br_aes_x86ni_ctr_get_vtable();
+    if (ictr == NULL) {
+        ictr = br_aes_pwr8_ctr_get_vtable();
+        if (ictr == NULL) {
+#if BR_64
+            ictr = &br_aes_ct64_ctr_vtable;
+#else
+            ictr = &br_aes_ct_ctr_vtable;
+#endif
+        }
+    }
+    br_aesctr_drbg_init(&rng, ictr, "Dilithium keygen seed", 15);
+
+    if (kgen == 0) {
+        printf("%-30s KEYGEN UNAVAILABLE\n", name);
+        fflush(stdout);
+        return;
+    }
+
+    num = 10;
+    for (;;) {
+        clock_t begin, end;
+        double tt;
+        long k;
+
+        begin = clock();
+        for (k = num; k > 0; k--) {
+            kgen(&rng.vtable, &sk, kbuf_priv, &pk, kbuf_pub, mode);
+#ifdef DILITHIUM_TESTING_SIGN
+            break;
+#endif
+#ifdef DILITHIUM_TESTING_VERIFY
+            break;
+#endif
+        }
+        end = clock();
+        tt = (double) (end - begin) / CLOCKS_PER_SEC;
+        if (tt >= 10.0) {
+            printf("%-30s %8.2f kgen/s\n", name,
+                   (double) num / tt);
+            fflush(stdout);
+            break;
+        }
+        num <<= 1;
+#ifdef DILITHIUM_TESTING_SIGN
+        break;
+#endif
+#ifdef DILITHIUM_TESTING_VERIFY
+        break;
+#endif
+    }
+
+    memset(sig, 'R', sizeof sig);
+    num = 10;
+    for (;;) {
+        clock_t begin, end;
+        double tt;
+        long k;
+
+        begin = clock();
+        for (k = num; k > 0; k--) {
+            sign(&rng.vtable, &sk, sig, sizeof(sig), msg, strlen(msg));
+#ifdef DILITHIUM_TESTING_VERIFY
+            break;
+#endif
+        }
+        end = clock();
+        tt = (double) (end - begin) / CLOCKS_PER_SEC;
+        if (tt >= 2.0) {
+            printf("%-30s %8.2f sig/s\n", name,
+                   (double) num / tt);
+            fflush(stdout);
+            break;
+        }
+        num <<= 1;
+#ifdef DILITHIUM_TESTING_VERIFY
+        break;
+#endif
+    }
+
+
+    num = 10;
+    for (;;) {
+        clock_t begin, end;
+        double tt;
+        long k;
+
+        begin = clock();
+        for (k = num; k > 0; k--) {
+            verify(&pk, sig, sizeof(sig), msg, strlen(msg));
+#ifdef DILITHIUM_TESTING_VERIFY
+            break;
+#endif
+        }
+        end = clock();
+        tt = (double) (end - begin) / CLOCKS_PER_SEC;
+        if (tt >= 2.0) {
+            printf("%-30s %8.2f verif/s\n", name,
+                   (double) num / tt);
+            fflush(stdout);
+            break;
+        }
+        num <<= 1;
+#ifdef DILITHIUM_TESTING_VERIFY
+        break;
+#endif
+    }
+}
+
+static void
+test_speed_dilithium_1_third_party(void) {
+    test_speed_dilithium_inner("Dilithium1 third party",
+                               &br_dilithium_third_party_sign,
+                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_keygen,
+                               1);
+}
+
+static void
+test_speed_dilithium_2_third_party(void) {
+    test_speed_dilithium_inner("Dilithium2 third party",
+                               &br_dilithium_third_party_sign,
+                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_keygen,
+                               2);
+}
+
+static void
+test_speed_dilithium_3_third_party(void) {
+    test_speed_dilithium_inner("Dilithium3 third party",
+                               &br_dilithium_third_party_sign,
+                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_keygen,
+                               3);
+}
+
+static void
+test_speed_dilithium_4_third_party(void) {
+    test_speed_dilithium_inner("Dilithium4 third party",
+                               &br_dilithium_third_party_sign,
+                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_keygen,
+                               4);
+}
+
+static void
 test_speed_kyber_inner(char *name,
                        br_kyber_encrypt enc, br_kyber_decrypt dec, br_kyber_keygen kgen, uint8_t count) {
     unsigned char ct[BR_KYBER_CIPHERTEXT_SIZE(count)];
     unsigned char ss[32];
-    unsigned char kbuf_priv[BR_KYBER_POLYVEC_SIZE(count)];
-    unsigned char kbuf_pub[BR_KYBER_POLYVEC_SIZE(count)];
+    unsigned char kbuf_priv[BR_KYBER_PRIVATE_KEY_SIZE(count)];
+    unsigned char kbuf_pub[BR_KYBER_PUBLIC_KEY_SIZE(count)];
     long num;
     br_kyber_private_key sk;
     br_kyber_public_key pk;
@@ -1335,10 +1494,7 @@ test_speed_kyber_inner(char *name,
         begin = clock();
         for (k = num; k > 0; k--) {
             kgen(&rng.vtable, &sk, kbuf_priv, &pk, kbuf_pub, count);
-#ifdef TESTING_ENC
-            break;
-#endif
-#ifdef TESTING_DEC
+#if defined KYBER_TESTING_ENC || defined KYBER_TESTING_DEC
             break;
 #endif
         }
@@ -1351,10 +1507,7 @@ test_speed_kyber_inner(char *name,
             break;
         }
         num <<= 1;
-#ifdef TESTING_ENC
-        break;
-#endif
-#ifdef TESTING_DEC
+#if defined KYBER_TESTING_ENC || defined KYBER_TESTING_DEC
         break;
 #endif
     }
@@ -1369,7 +1522,7 @@ test_speed_kyber_inner(char *name,
         begin = clock();
         for (k = num; k > 0; k--) {
             enc(&rng.vtable, &pk, ct, sizeof(ct), ss, sizeof(ss));
-#ifdef TESTING_DEC
+#ifdef KYBER_TESTING_DEC
             break;
 #endif
         }
@@ -1382,7 +1535,7 @@ test_speed_kyber_inner(char *name,
             break;
         }
         num <<= 1;
-#ifdef TESTING_DEC
+#ifdef KYBER_TESTING_DEC
         break;
 #endif
     }
@@ -1835,6 +1988,11 @@ static const struct {
         STU(ecdsa_p256_m64),
         STU(ecdsa_i15),
         STU(ecdsa_i31),
+
+        STU(dilithium_1_third_party),
+        STU(dilithium_2_third_party),
+        STU(dilithium_3_third_party),
+        STU(dilithium_4_third_party),
 
         STU(kyber_512_third_party),
         STU(kyber_768_third_party),

@@ -7,6 +7,7 @@
 #include "poly.h"
 #include "polyvec.h"
 #include "packing.h"
+#include <stdio.h>
 
 /*************************************************
 * Name:        expand_mat
@@ -108,6 +109,11 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
   rho = seedbuf;
   rhoprime = seedbuf + SEEDBYTES;
   key = seedbuf + 2*SEEDBYTES;
+  
+#if defined DILITHIUM_TESTING_KEYGEN || defined DILITHIUM_TESTING_SIGN || defined DILITHIUM_TESTING_VERIFY
+    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
+  memset(seedbuf, DILITHIUM_RNG_OUTPUT_FORCE, 32 * 3);
+#endif
 
   /* Expand matrix */
   expand_mat(mat, rho);
@@ -115,6 +121,7 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
   /* Sample short vectors s1 and s2 */
   for(i = 0; i < L; ++i)
     poly_uniform_eta(&s1.vec[i], rhoprime, nonce++);
+
   for(i = 0; i < K; ++i)
     poly_uniform_eta(&s2.vec[i], rhoprime, nonce++);
 
@@ -138,9 +145,37 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
   /* Compute CRH(rho, t1) and write secret key */
   crh(tr, pk, CRYPTO_PUBLICKEYBYTES);
   pack_sk(sk, rho, key, tr, &s1, &s2, &t0);
+  
+#ifdef DILITHIUM_PRINT_KEYGEN
+	printf("///////////// KEYGEN /////////////\n");
+     // Print the full memory contents of the private and public key
+    printf("public key : rho (%ld bytes):\n", SEEDBYTES);
+    print_hex_memory(rho, SEEDBYTES);
+    printf("public key : t1 (%ld bytes):\n", K*POLT1_SIZE_PACKED);
+    print_hex_memory(pk + 32, K*POLT1_SIZE_PACKED);
 
-  return 0;
+    printf("private key : rho (%d bytes):\n", SEEDBYTES);
+    print_hex_memory(rho, SEEDBYTES);
+    printf("private key : key (%d bytes):\n", SEEDBYTES);
+    print_hex_memory(key, SEEDBYTES);
+    printf("private key : tr (%d bytes):\n", CRHBYTES);
+    print_hex_memory(tr, CRHBYTES);
+    printf("private key : s1 (%ld bytes):\n", POLETA_SIZE_PACKED*L);
+    print_hex_memory(sk + 2*SEEDBYTES + CRHBYTES, POLETA_SIZE_PACKED*L);
+    printf("private key : s2 (%ld bytes):\n", POLETA_SIZE_PACKED*K);
+    print_hex_memory(sk + 2*SEEDBYTES + CRHBYTES + POLETA_SIZE_PACKED*L, POLETA_SIZE_PACKED*K);
+    printf("private key : t0 (%ld bytes):\n", K*POLT0_SIZE_PACKED);
+    print_hex_memory(sk + CRYPTO_SECRETKEYBYTES - K*POLT0_SIZE_PACKED, K*POLT0_SIZE_PACKED);
+	printf("/////////// KEYGEN END ///////////\n");
+#endif
+
+#ifdef DILITHIUM_TESTING_KEYGEN
+    exit(-1);
+#endif
+
 }
+
+
 
 /*************************************************
 * Name:        crypto_sign
@@ -197,6 +232,13 @@ int crypto_sign(unsigned char *sm,
   crh(rhoprime, key, SEEDBYTES + CRHBYTES);
 #endif
 
+  
+#if defined DILITHIUM_TESTING_SIGN || defined DILITHIUM_TESTING_VERIFY
+    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
+  memset(rhoprime, DILITHIUM_RNG_OUTPUT_FORCE, CRHBYTES);
+#endif
+
+
   /* Expand matrix and transform vectors */
   expand_mat(mat, rho);
   polyvecl_ntt(&s1);
@@ -211,6 +253,7 @@ int crypto_sign(unsigned char *sm,
   /* Matrix-vector multiplication */
   yhat = y;
   polyvecl_ntt(&yhat);
+  
   for(i = 0; i < K; ++i) {
     polyvecl_pointwise_acc_invmontgomery(&w.vec[i], &mat[i], &yhat);
     poly_reduce(&w.vec[i]);
@@ -219,22 +262,12 @@ int crypto_sign(unsigned char *sm,
 
   /* Decompose w and call the random oracle */
   polyveck_csubq(&w);
+  
   polyveck_decompose(&w1, &w0, &w);
   challenge(&c, mu, &w1);
   chat = c;
   poly_ntt(&chat);
-
-  /* Check that subtracting cs2 does not change high bits of w and low bits
-   * do not reveal secret information */
-  for(i = 0; i < K; ++i) {
-    poly_pointwise_invmontgomery(&cs2.vec[i], &chat, &s2.vec[i]);
-    poly_invntt_montgomery(&cs2.vec[i]);
-  }
-  polyveck_sub(&w0, &w0, &cs2);
-  polyveck_freeze(&w0);
-  if(polyveck_chknorm(&w0, GAMMA2 - BETA))
-    goto rej;
-
+  
   /* Compute z, reject if it reveals secret */
   for(i = 0; i < L; ++i) {
     poly_pointwise_invmontgomery(&z.vec[i], &chat, &s1.vec[i]);
@@ -244,6 +277,19 @@ int crypto_sign(unsigned char *sm,
   polyvecl_freeze(&z);
   if(polyvecl_chknorm(&z, GAMMA1 - BETA))
     goto rej;
+
+  /* Check that subtracting cs2 does not change high bits of w and low bits
+   * do not reveal secret information */
+  for(i = 0; i < K; ++i) {
+    poly_pointwise_invmontgomery(&cs2.vec[i], &chat, &s2.vec[i]);
+    poly_invntt_montgomery(&cs2.vec[i]);
+  }
+  polyveck_sub(&w0, &w0, &cs2);
+  polyveck_freeze(&w0);
+
+  if(polyveck_chknorm(&w0, GAMMA2 - BETA))
+    goto rej;
+
 
   /* Compute hints for w1 */
   for(i = 0; i < K; ++i) {
@@ -265,7 +311,25 @@ int crypto_sign(unsigned char *sm,
   pack_sig(sm, &z, &h, &c);
 
   *smlen = mlen + CRYPTO_BYTES;
+  
+#ifdef DILITHIUM_PRINT_SIGN
+	printf("////////////// SIGN //////////////\n");
+    // Print the full memory contents of the signature
+    printf("sig : z (%ld bytes):\n", L*POLZ_SIZE_PACKED);
+    print_hex_memory(sm, L*POLZ_SIZE_PACKED);
+    printf("sig : h (%ld bytes):\n", (OMEGA + K));
+    print_hex_memory(sm + L*POLZ_SIZE_PACKED, (OMEGA + K));
+    printf("sig : c (%ld bytes):\n", (N/8 + 8));
+    print_hex_memory(sm + CRYPTO_BYTES - (N/8 + 8), (N/8 + 8));
+	printf("//////////// END SIGN ////////////\n");
+#endif
+
+#ifdef DILITHIUM_TESTING_SIGN
+    exit(-1);
+#endif
   return 0;
+  
+  
 }
 
 /*************************************************
@@ -346,6 +410,17 @@ int crypto_sign_open(unsigned char *m,
   for(i = 0; i < *mlen; ++i)
     m[i] = sm[CRYPTO_BYTES + i];
 
+#ifdef DILITHIUM_PRINT_VERIFY
+	printf("///////////// VERIFY /////////////\n");
+    printf("reconstructed challenge polynomial (%ld bytes) : \n", sizeof cp.coeffs);
+	print_hex_memory(cp.coeffs, sizeof cp.coeffs);
+	printf("/////////// END VERIFY ///////////\n");
+#endif
+
+#ifdef DILITHIUM_TESTING_VERIFY
+	exit(-1);
+#endif
+
   return 0;
 
   /* Signature verification failed */
@@ -356,3 +431,18 @@ int crypto_sign_open(unsigned char *m,
 
   return -1;
 }
+
+#if defined DILITHIUM_PRINT_KEYGEN || defined DILITHIUM_PRINT_SIGN || defined DILITHIUM_PRINT_VERIFY
+void print_hex_memory(void *mem, size_t length) {
+    size_t i;
+    unsigned char *p = (unsigned char *) mem;
+    for (i = 0; i < length; i++) {
+        printf("0x%02x ", p[i]);
+        if ((i % 16 == 15) && i < length)
+            printf("\n");
+    }
+    printf("\n");
+    return 0;
+
+}
+#endif

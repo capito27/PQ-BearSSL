@@ -1,6 +1,7 @@
 #include <stdint.h>
-#include "inc/common_poly.h"
-#include "inc/common_polyvec.h"
+#include "inc/kyber_poly.h"
+#include "inc/kyber_polyvec.h"
+#include "inc/kyber_reduce.h"
 
 /*************************************************
 * Name:        polyvec_compress
@@ -11,19 +12,18 @@
 *                            (needs space for KYBER_POLYVECCOMPRESSEDBYTES)
 *              - polyvec *a: pointer to input vector of polynomials
 **************************************************/
-// TODO remove magic numbers in condition, and  256 / 3329 in loop
-void polyvec_compress(uint8_t *r, size_t rlen, polyvec *a) {
+
+void br_kyber_third_party_polyvec_compress(uint8_t *r, unsigned polynbr, br_kyber_third_party_polyvec *a) {
     unsigned int i, j, k;
 
-    polyvec_csubq(a);
-
-    if (rlen == a->veclen * 352) {
+    br_kyber_third_party_polyvec_csubq(a);
+    if (polynbr == 4) {
         uint16_t t[8];
         for (i = 0; i < a->veclen; i++) {
-            for (j = 0; j < 256 / 8; j++) {
+            for (j = 0; j < sizeof(a->vec[i].coeffs) / sizeof(a->vec[i].coeffs[0]) / 8; j++) {
                 for (k = 0; k < 8; k++)
-                    t[k] = ((((uint32_t) a->vec[i].coeffs[8 * j + k] << 11) + 3329 / 2)
-                            / 3329) & 0x7ff;
+                    t[k] = ((((uint32_t) a->vec[i].coeffs[8 * j + k] << 11) + BR_KYBER_THIRD_PARTY_Q / 2)
+                            / BR_KYBER_THIRD_PARTY_Q) & 0x7ff;
 
                 r[0] = (t[0] >> 0);
                 r[1] = (t[0] >> 8) | (t[1] << 3);
@@ -39,13 +39,13 @@ void polyvec_compress(uint8_t *r, size_t rlen, polyvec *a) {
                 r += 11;
             }
         }
-    } else if (rlen == a->veclen * 320) {
+    } else {
         uint16_t t[4];
         for (i = 0; i < a->veclen; i++) {
-            for (j = 0; j < 256 / 4; j++) {
+            for (j = 0; j < sizeof(a->vec[i].coeffs) / sizeof(a->vec[i].coeffs[0]) / 4; j++) {
                 for (k = 0; k < 4; k++)
-                    t[k] = ((((uint32_t) a->vec[i].coeffs[4 * j + k] << 10) + 3329 / 2)
-                            / 3329) & 0x3ff;
+                    t[k] = ((((uint32_t) a->vec[i].coeffs[4 * j + k] << 10) + BR_KYBER_THIRD_PARTY_Q / 2)
+                            / BR_KYBER_THIRD_PARTY_Q) & 0x3ff;
 
                 r[0] = (t[0] >> 0);
                 r[1] = (t[0] >> 8) | (t[1] << 2);
@@ -55,9 +55,6 @@ void polyvec_compress(uint8_t *r, size_t rlen, polyvec *a) {
                 r += 5;
             }
         }
-    } else {
-        // TODO support error ? (return status code ?)
-        // #error "KYBER_POLYVECCOMPRESSEDBYTES needs to be in {320*KYBER_K, 352*KYBER_K}"
     }
 }
 
@@ -71,14 +68,13 @@ void polyvec_compress(uint8_t *r, size_t rlen, polyvec *a) {
 *              - const uint8_t *a: pointer to input byte array
 *                                  (of length KYBER_POLYVECCOMPRESSEDBYTES)
 **************************************************/
-// TODO remove magic number 2 and 256 in loop
-void polyvec_decompress(polyvec *r, const uint8_t *a, size_t alen) {
+void br_kyber_third_party_polyvec_decompress(br_kyber_third_party_polyvec *r, const uint8_t *a, unsigned polynbr) {
     unsigned int i, j, k;
 
-    if (alen == r->veclen * 352) {
+    if (polynbr == 4) {
         uint16_t t[8];
         for (i = 0; i < r->veclen; i++) {
-            for (j = 0; j < 256 / 8; j++) {
+            for (j = 0; j < sizeof(r->vec[i].coeffs) / sizeof(r->vec[i].coeffs[0]) / 8; j++) {
                 t[0] = (a[0] >> 0) | ((uint16_t) a[1] << 8);
                 t[1] = (a[1] >> 3) | ((uint16_t) a[2] << 5);
                 t[2] = (a[2] >> 6) | ((uint16_t) a[3] << 2) | ((uint16_t) a[4] << 10);
@@ -90,13 +86,13 @@ void polyvec_decompress(polyvec *r, const uint8_t *a, size_t alen) {
                 a += 11;
 
                 for (k = 0; k < 8; k++)
-                    r->vec[i].coeffs[8 * j + k] = ((uint32_t)(t[k] & 0x7FF) * 3329 + 1024) >> 11;
+                    r->vec[i].coeffs[8 * j + k] = ((uint32_t)(t[k] & 0x7FF) * BR_KYBER_THIRD_PARTY_Q + 1024) >> 11;
             }
         }
-    } else if (alen == r->veclen * 320) {
+    } else {
         uint16_t t[4];
         for (i = 0; i < r->veclen; i++) {
-            for (j = 0; j < 256 / 4; j++) {
+            for (j = 0; j < sizeof(r->vec[i].coeffs) / sizeof(r->vec[i].coeffs[0]) / 4; j++) {
                 t[0] = (a[0] >> 0) | ((uint16_t) a[1] << 8);
                 t[1] = (a[1] >> 2) | ((uint16_t) a[2] << 6);
                 t[2] = (a[2] >> 4) | ((uint16_t) a[3] << 4);
@@ -104,12 +100,9 @@ void polyvec_decompress(polyvec *r, const uint8_t *a, size_t alen) {
                 a += 5;
 
                 for (k = 0; k < 4; k++)
-                    r->vec[i].coeffs[4 * j + k] = ((uint32_t)(t[k] & 0x3FF) * 3329 + 512) >> 10;
+                    r->vec[i].coeffs[4 * j + k] = ((uint32_t)(t[k] & 0x3FF) * BR_KYBER_THIRD_PARTY_Q + 512) >> 10;
             }
         }
-    } else {
-        // TODO support error ? (return status code ?)
-        // #error "KYBER_POLYVECCOMPRESSEDBYTES needs to be in {320*KYBER_K, 352*KYBER_K}"}
     }
 }
 
@@ -122,11 +115,10 @@ void polyvec_decompress(polyvec *r, const uint8_t *a, size_t alen) {
 *                            (needs space for KYBER_POLYVECBYTES)
 *              - polyvec *a: pointer to input vector of polynomials
 **************************************************/
-// TODO remove magic number 384 + verify rlen
-void polyvec_tobytes(uint8_t *r, size_t rlen, polyvec *a) {
+void br_kyber_third_party_polyvec_tobytes(uint8_t *r, br_kyber_third_party_polyvec *a) {
     unsigned int i;
     for (i = 0; i < a->veclen; i++)
-        poly_tobytes(r + i * 384, 384, &a->vec[i]);
+        br_kyber_third_party_poly_tobytes(r + i * 384, &a->vec[i]);
 }
 
 /*************************************************
@@ -139,11 +131,10 @@ void polyvec_tobytes(uint8_t *r, size_t rlen, polyvec *a) {
 *              - const polyvec *a: pointer to input vector of polynomials
 *                                  (of length KYBER_POLYVECBYTES)
 **************************************************/
-// TODO remove magic number 384 + verify rlen
-void polyvec_frombytes(polyvec *r, const uint8_t *a, size_t alen){
+void br_kyber_third_party_polyvec_frombytes(br_kyber_third_party_polyvec *r, const uint8_t *a) {
     unsigned int i;
     for (i = 0; i < r->veclen; i++)
-        poly_frombytes(&r->vec[i], a + i * 384, 384);
+        br_kyber_third_party_poly_frombytes(&r->vec[i], a + i * 384);
 }
 
 /*************************************************
@@ -153,10 +144,10 @@ void polyvec_frombytes(polyvec *r, const uint8_t *a, size_t alen){
 *
 * Arguments:   - polyvec *r: pointer to in/output vector of polynomials
 **************************************************/
-void polyvec_ntt(polyvec *r) {
+void br_kyber_third_party_polyvec_ntt(br_kyber_third_party_polyvec *r) {
     unsigned int i;
     for (i = 0; i < r->veclen; i++)
-        poly_ntt(&r->vec[i]);
+        br_kyber_third_party_poly_ntt(&r->vec[i]);
 }
 
 /*************************************************
@@ -167,10 +158,10 @@ void polyvec_ntt(polyvec *r) {
 *
 * Arguments:   - polyvec *r: pointer to in/output vector of polynomials
 **************************************************/
-void polyvec_invntt_tomont(polyvec *r) {
+void br_kyber_third_party_polyvec_invntt_tomont(br_kyber_third_party_polyvec *r) {
     unsigned int i;
     for (i = 0; i < r->veclen; i++)
-        poly_invntt_tomont(&r->vec[i]);
+        br_kyber_third_party_poly_invntt_tomont(&r->vec[i]);
 }
 
 /*************************************************
@@ -183,19 +174,19 @@ void polyvec_invntt_tomont(polyvec *r) {
 *            - const polyvec *a: pointer to first input vector of polynomials
 *            - const polyvec *b: pointer to second input vector of polynomials
 **************************************************/
-void polyvec_pointwise_acc_montgomery(poly *r,
-                                      const polyvec *a,
-                                      const polyvec *b) {
+void br_kyber_third_party_polyvec_pointwise_acc_montgomery(br_kyber_third_party_poly *r,
+                                                           const br_kyber_third_party_polyvec *a,
+                                                           const br_kyber_third_party_polyvec *b) {
     unsigned int i;
-    poly t;
+    br_kyber_third_party_poly t;
 
-    poly_basemul_montgomery(r, &a->vec[0], &b->vec[0]);
+    br_kyber_third_party_poly_basemul_montgomery(r, &a->vec[0], &b->vec[0]);
     for (i = 1; i < a->veclen; i++) {
-        poly_basemul_montgomery(&t, &a->vec[i], &b->vec[i]);
-        poly_add(r, r, &t);
+        br_kyber_third_party_poly_basemul_montgomery(&t, &a->vec[i], &b->vec[i]);
+        br_kyber_third_party_poly_add(r, r, &t);
     }
 
-    poly_reduce(r);
+    br_kyber_third_party_poly_reduce(r);
 }
 
 /*************************************************
@@ -207,10 +198,10 @@ void polyvec_pointwise_acc_montgomery(poly *r,
 *
 * Arguments:   - poly *r: pointer to input/output polynomial
 **************************************************/
-void polyvec_reduce(polyvec *r) {
+void br_kyber_third_party_polyvec_reduce(br_kyber_third_party_polyvec *r) {
     unsigned int i;
     for (i = 0; i < r->veclen; i++)
-        poly_reduce(&r->vec[i]);
+        br_kyber_third_party_poly_reduce(&r->vec[i]);
 }
 
 /*************************************************
@@ -223,10 +214,10 @@ void polyvec_reduce(polyvec *r) {
 *
 * Arguments:   - poly *r: pointer to input/output polynomial
 **************************************************/
-void polyvec_csubq(polyvec *r) {
+void br_kyber_third_party_polyvec_csubq(br_kyber_third_party_polyvec *r) {
     unsigned int i;
     for (i = 0; i < r->veclen; i++)
-        poly_csubq(&r->vec[i]);
+        br_kyber_third_party_poly_csubq(&r->vec[i]);
 }
 
 /*************************************************
@@ -238,8 +229,9 @@ void polyvec_csubq(polyvec *r) {
 *            - const polyvec *a: pointer to first input vector of polynomials
 *            - const polyvec *b: pointer to second input vector of polynomials
 **************************************************/
-void polyvec_add(polyvec *r, const polyvec *a, const polyvec *b) {
+void br_kyber_third_party_polyvec_add(br_kyber_third_party_polyvec *r, const br_kyber_third_party_polyvec *a,
+                                      const br_kyber_third_party_polyvec *b) {
     unsigned int i;
     for (i = 0; i < r->veclen; i++)
-        poly_add(&r->vec[i], &a->vec[i], &b->vec[i]);
+        br_kyber_third_party_poly_add(&r->vec[i], &a->vec[i], &b->vec[i]);
 }

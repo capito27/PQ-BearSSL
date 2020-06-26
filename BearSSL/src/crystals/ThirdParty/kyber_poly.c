@@ -1,6 +1,6 @@
 #include <stdint.h>
-#include "inc/common_poly.h"
-#include "inc/common_ntt.h"
+#include "inc/kyber_poly.h"
+#include "inc/kyber_ntt.h"
 #include "inc/kyber_reduce.h"
 #include "inc/kyber_cbd.h"
 #include "inner.h"
@@ -14,26 +14,27 @@
 *                            (of length KYBER_POLYCOMPRESSEDBYTES)
 *              - poly *a:    pointer to input polynomial
 **************************************************/
-// TODO remove magic numbers 96/128/160 and 256 / 3329 in loop
-void poly_compress(uint8_t *r, size_t rlen, poly *a) {
+void br_kyber_third_party_poly_compress(uint8_t *r, unsigned polynbr, br_kyber_third_party_poly *a) {
     unsigned int i, j;
     uint8_t t[8];
 
-    poly_csubq(a);
-    if (rlen == 96) {
-        for (i = 0; i < 256 / 8; i++) {
+    br_kyber_third_party_poly_csubq(a);
+    if (polynbr == 2) {
+        for (i = 0; i < sizeof(a->coeffs) / sizeof(a->coeffs[0]) / 8; i++) {
             for (j = 0; j < 8; j++)
-                t[j] = ((((uint16_t) a->coeffs[8 * i + j] << 3) + 3329 / 2) / 3329) & 7;
+                t[j] = ((((uint16_t) a->coeffs[8 * i + j] << 3) + BR_KYBER_THIRD_PARTY_Q / 2) /
+                        BR_KYBER_THIRD_PARTY_Q) & 7;
 
             r[0] = (t[0] >> 0) | (t[1] << 3) | (t[2] << 6);
             r[1] = (t[2] >> 2) | (t[3] << 1) | (t[4] << 4) | (t[5] << 7);
             r[2] = (t[5] >> 1) | (t[6] << 2) | (t[7] << 5);
             r += 3;
         }
-    } else if (rlen == 128) {
-        for (i = 0; i < 256 / 8; i++) {
+    } else if (polynbr == 3) {
+        for (i = 0; i < sizeof(a->coeffs) / sizeof(a->coeffs[0]) / 8; i++) {
             for (j = 0; j < 8; j++)
-                t[j] = ((((uint16_t) a->coeffs[8 * i + j] << 4) + 3329 / 2) / 3329) & 15;
+                t[j] = ((((uint16_t) a->coeffs[8 * i + j] << 4) + BR_KYBER_THIRD_PARTY_Q / 2) /
+                        BR_KYBER_THIRD_PARTY_Q) & 15;
 
             r[0] = t[0] | (t[1] << 4);
             r[1] = t[2] | (t[3] << 4);
@@ -41,10 +42,11 @@ void poly_compress(uint8_t *r, size_t rlen, poly *a) {
             r[3] = t[6] | (t[7] << 4);
             r += 4;
         }
-    } else if (rlen == 160) {
-        for (i = 0; i < 256 / 8; i++) {
+    } else if (polynbr == 4) {
+        for (i = 0; i < sizeof(a->coeffs) / sizeof(a->coeffs[0]) / 8; i++) {
             for (j = 0; j < 8; j++)
-                t[j] = ((((uint32_t) a->coeffs[8 * i + j] << 5) + 3329 / 2) / 3329) & 31;
+                t[j] = ((((uint32_t) a->coeffs[8 * i + j] << 5) + BR_KYBER_THIRD_PARTY_Q / 2) /
+                        BR_KYBER_THIRD_PARTY_Q) & 31;
 
             r[0] = (t[0] >> 0) | (t[1] << 5);
             r[1] = (t[1] >> 3) | (t[2] << 2) | (t[3] << 7);
@@ -53,9 +55,6 @@ void poly_compress(uint8_t *r, size_t rlen, poly *a) {
             r[4] = (t[6] >> 2) | (t[7] << 3);
             r += 5;
         }
-    } else {
-        // TODO support error ? (return status code ?)
-        //#error "KYBER_POLYCOMPRESSEDBYTES needs to be in {96, 128, 160}"
     }
 }
 
@@ -69,14 +68,13 @@ void poly_compress(uint8_t *r, size_t rlen, poly *a) {
 *              - const uint8_t *a: pointer to input byte array
 *                                  (of length KYBER_POLYCOMPRESSEDBYTES bytes)
 **************************************************/
-// TODO remove magic numbers 96/128/160 and 256 in loop
-void poly_decompress(poly *r, const uint8_t *a, size_t alen) {
+void br_kyber_third_party_poly_decompress(br_kyber_third_party_poly *r, const uint8_t *a, unsigned polynbr) {
     unsigned int i;
 
-    if (alen == 96) {
+    if (polynbr == 2) {
         unsigned int j;
         uint8_t t[8];
-        for (i = 0; i < 256 / 8; i++) {
+        for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]) / 8; i++) {
             t[0] = (a[0] >> 0);
             t[1] = (a[0] >> 3);
             t[2] = (a[0] >> 6) | (a[1] << 2);
@@ -88,18 +86,18 @@ void poly_decompress(poly *r, const uint8_t *a, size_t alen) {
             a += 3;
 
             for (j = 0; j < 8; j++)
-                r->coeffs[8 * i + j] = ((uint16_t)(t[j] & 7) * 3329 + 4) >> 3;
+                r->coeffs[8 * i + j] = ((uint16_t)(t[j] & 7) * BR_KYBER_THIRD_PARTY_Q + 4) >> 3;
         }
-    } else if (alen == 128) {
-        for (i = 0; i < 256 / 2; i++) {
-            r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * 3329) + 8) >> 4;
-            r->coeffs[2 * i + 1] = (((uint16_t)(a[0] >> 4) * 3329) + 8) >> 4;
+    } else if (polynbr == 3) {
+        for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]) / 2; i++) {
+            r->coeffs[2 * i + 0] = (((uint16_t)(a[0] & 15) * BR_KYBER_THIRD_PARTY_Q) + 8) >> 4;
+            r->coeffs[2 * i + 1] = (((uint16_t)(a[0] >> 4) * BR_KYBER_THIRD_PARTY_Q) + 8) >> 4;
             a += 1;
         }
-    } else if (alen == 160) {
+    } else if (polynbr == 4) {
         unsigned int j;
         uint8_t t[8];
-        for (i = 0; i < 256 / 8; i++) {
+        for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]) / 8; i++) {
             t[0] = (a[0] >> 0);
             t[1] = (a[0] >> 5) | (a[1] << 3);
             t[2] = (a[1] >> 2);
@@ -111,11 +109,8 @@ void poly_decompress(poly *r, const uint8_t *a, size_t alen) {
             a += 5;
 
             for (j = 0; j < 8; j++)
-                r->coeffs[8 * i + j] = ((uint32_t)(t[j] & 31) * 3329 + 16) >> 5;
+                r->coeffs[8 * i + j] = ((uint32_t)(t[j] & 31) * BR_KYBER_THIRD_PARTY_Q + 16) >> 5;
         }
-    } else {
-        // TODO support error ? (return status code ?)
-        //#error "KYBER_POLYCOMPRESSEDBYTES needs to be in {96, 128, 160}"
     }
 }
 
@@ -128,14 +123,13 @@ void poly_decompress(poly *r, const uint8_t *a, size_t alen) {
 *                            (needs space for KYBER_POLYBYTES bytes)
 *              - poly *a:    pointer to input polynomial
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_tobytes(uint8_t *r, size_t rlen, poly *a) {
+void br_kyber_third_party_poly_tobytes(uint8_t *r, br_kyber_third_party_poly *a) {
     unsigned int i;
     uint16_t t0, t1;
 
-    poly_csubq(a);
+    br_kyber_third_party_poly_csubq(a);
 
-    for (i = 0; i < 256 / 2; i++) {
+    for (i = 0; i < sizeof(a->coeffs) / sizeof(a->coeffs[0]) / 2; i++) {
         t0 = a->coeffs[2 * i];
         t1 = a->coeffs[2 * i + 1];
         r[3 * i + 0] = (t0 >> 0);
@@ -154,38 +148,11 @@ void poly_tobytes(uint8_t *r, size_t rlen, poly *a) {
 *              - const uint8_t *a: pointer to input byte array
 *                                  (of KYBER_POLYBYTES bytes)
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_frombytes(poly *r, const uint8_t *a, size_t alen) {
+void br_kyber_third_party_poly_frombytes(br_kyber_third_party_poly *r, const uint8_t *a) {
     unsigned int i;
-    for (i = 0; i < 256 / 2; i++) {
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]) / 2; i++) {
         r->coeffs[2 * i] = ((a[3 * i + 0] >> 0) | ((uint16_t) a[3 * i + 1] << 8)) & 0xFFF;
         r->coeffs[2 * i + 1] = ((a[3 * i + 1] >> 4) | ((uint16_t) a[3 * i + 2] << 4)) & 0xFFF;
-    }
-}
-
-/*************************************************
-* Name:        poly_frommsg
-*
-* Description: Convert 32-byte message to polynomial
-*
-* Arguments:   - poly *r:            pointer to output polynomial
-*              - const uint8_t *msg: pointer to input message
-**************************************************/
-// TODO remove magic number 256 in loop and condition
-void poly_frommsg(poly *r, const uint8_t *msg, size_t msglen) {
-    unsigned int i, j;
-    int16_t mask;
-
-    if (msglen != 256 / 8) {
-        // TODO support error ? (return status code ?)
-        // #error "KYBER_INDCPA_MSGBYTES must be equal to KYBER_N/8 bytes!"
-    } else {
-        for (i = 0; i < 256 / 8; i++) {
-            for (j = 0; j < 8; j++) {
-                mask = -(int16_t)((msg[i] >> j) & 1);
-                r->coeffs[8 * i + j] = mask & ((3329 + 1) / 2);
-            }
-        }
     }
 }
 
@@ -197,41 +164,41 @@ void poly_frommsg(poly *r, const uint8_t *msg, size_t msglen) {
 * Arguments:   - uint8_t *msg: pointer to output message
 *              - poly *a:      pointer to input polynomial
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_tomsg(uint8_t *msg, size_t msglen, poly *a) {
+void br_kyber_third_party_poly_tomsg(uint8_t *msg, br_kyber_third_party_poly *a) {
     unsigned int i, j;
     uint16_t t;
 
-    poly_csubq(a);
+    br_kyber_third_party_poly_csubq(a);
 
-    for (i = 0; i < 256 / 8; i++) {
+    for (i = 0; i < sizeof(a->coeffs) / sizeof(a->coeffs[0]) / 8; i++) {
         msg[i] = 0;
         for (j = 0; j < 8; j++) {
-            t = ((((uint16_t) a->coeffs[8 * i + j] << 1) + 3329 / 2) / 3329) & 1;
+            t = ((((uint16_t) a->coeffs[8 * i + j] << 1) + BR_KYBER_THIRD_PARTY_Q / 2) / BR_KYBER_THIRD_PARTY_Q) & 1;
             msg[i] |= t << j;
         }
     }
 }
 
 /*************************************************
-* Name:        poly_getnoise
+* Name:        poly_frommsg
 *
-* Description: Sample a polynomial deterministically from a seed and a nonce,
-*              with output polynomial close to centered binomial distribution
-*              with parameter KYBER_ETA
+* Description: Convert 32-byte message to polynomial
 *
-* Arguments:   - poly *r:             pointer to output polynomial
-*              - const uint8_t *seed: pointer to input seed
-*                                     (of length KYBER_SYMBYTES bytes)
-*              - uint8_t nonce:       one-byte input nonce
+* Arguments:   - poly *r:            pointer to output polynomial
+*              - const uint8_t *msg: pointer to input message
 **************************************************/
+void br_kyber_third_party_poly_frommsg(br_kyber_third_party_poly *r, const uint8_t *msg) {
+    unsigned int i, j;
+    int16_t mask;
 
-// TODO remove magic number 2 and 256 in buf
-void poly_getnoise(poly *r, const uint8_t *seed, size_t seedlen,  uint8_t nonce) {
-    uint8_t buf[2 * 256 / 4];
-    // TODO Pseudo-random function to deal with
-    //prf(buf, sizeof(buf), seed, nonce);
-    br_kyber_cbd(r, buf, sizeof(buf));
+
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]) / 8; i++) {
+        for (j = 0; j < 8; j++) {
+            mask = -(int16_t)((msg[i] >> j) & 1);
+            r->coeffs[8 * i + j] = mask & ((BR_KYBER_THIRD_PARTY_Q + 1) / 2);
+        }
+    }
+
 }
 
 /*************************************************
@@ -243,9 +210,9 @@ void poly_getnoise(poly *r, const uint8_t *seed, size_t seedlen,  uint8_t nonce)
 *
 * Arguments:   - uint16_t *r: pointer to in/output polynomial
 **************************************************/
-void poly_ntt(poly *r) {
-    ntt(r->coeffs, sizeof(r->coeffs));
-    poly_reduce(r);
+void br_kyber_third_party_poly_ntt(br_kyber_third_party_poly *r) {
+    br_kyber_third_party_ntt(r->coeffs, sizeof(r->coeffs) / sizeof(r->coeffs[0]));
+    br_kyber_third_party_poly_reduce(r);
 }
 
 /*************************************************
@@ -257,8 +224,8 @@ void poly_ntt(poly *r) {
 *
 * Arguments:   - uint16_t *a: pointer to in/output polynomial
 **************************************************/
-void poly_invntt_tomont(poly *r) {
-    invntt(r->coeffs, sizeof(r->coeffs));
+void br_kyber_third_party_poly_invntt_tomont(br_kyber_third_party_poly *r) {
+    br_kyber_third_party_invntt(r->coeffs, sizeof(r->coeffs) / sizeof(r->coeffs[0]));
 }
 
 /*************************************************
@@ -270,13 +237,14 @@ void poly_invntt_tomont(poly *r) {
 *              - const poly *a: pointer to first input polynomial
 *              - const poly *b: pointer to second input polynomial
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
+void br_kyber_third_party_poly_basemul_montgomery(br_kyber_third_party_poly *r, const br_kyber_third_party_poly *a,
+                                                  const br_kyber_third_party_poly *b) {
     unsigned int i;
-    for (i = 0; i < 256 / 4; i++) {
-        basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i], zetas[64 + i]);
-        basemul(&r->coeffs[4 * i + 2], &a->coeffs[4 * i + 2], &b->coeffs[4 * i + 2],
-                -zetas[64 + i]);
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]) / 4; i++) {
+        br_kyber_third_party_basemul(&r->coeffs[4 * i], &a->coeffs[4 * i], &b->coeffs[4 * i],
+                                     br_kyber_third_party_zetas[64 + i]);
+        br_kyber_third_party_basemul(&r->coeffs[4 * i + 2], &a->coeffs[4 * i + 2], &b->coeffs[4 * i + 2],
+                                     -br_kyber_third_party_zetas[64 + i]);
     }
 }
 
@@ -288,12 +256,11 @@ void poly_basemul_montgomery(poly *r, const poly *a, const poly *b) {
 *
 * Arguments:   - poly *r: pointer to input/output polynomial
 **************************************************/
-// TODO remove magic number 256 in loop and 3329 in f
-void poly_tomont(poly *r) {
+void br_kyber_third_party_poly_tomont(br_kyber_third_party_poly *r) {
     unsigned int i;
-    const int16_t f = (1ULL << 32) % 3329;
-    for (i = 0; i < 256; i++)
-        r->coeffs[i] = montgomery_reduce((int32_t) r->coeffs[i] * f);
+    const int16_t f = (1ULL << 32) % BR_KYBER_THIRD_PARTY_Q;
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]); i++)
+        r->coeffs[i] = br_kyber_third_party_montgomery_reduce((int32_t) r->coeffs[i] * f);
 }
 
 /*************************************************
@@ -304,11 +271,10 @@ void poly_tomont(poly *r) {
 *
 * Arguments:   - poly *r: pointer to input/output polynomial
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_reduce(poly *r) {
+void br_kyber_third_party_poly_reduce(br_kyber_third_party_poly *r) {
     unsigned int i;
-    for (i = 0; i < 256; i++)
-        r->coeffs[i] = barrett_reduce(r->coeffs[i]);
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]); i++)
+        r->coeffs[i] = br_kyber_third_party_barrett_reduce(r->coeffs[i]);
 }
 
 /*************************************************
@@ -320,11 +286,10 @@ void poly_reduce(poly *r) {
 *
 * Arguments:   - poly *r: pointer to input/output polynomial
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_csubq(poly *r) {
+void br_kyber_third_party_poly_csubq(br_kyber_third_party_poly *r) {
     unsigned int i;
-    for (i = 0; i < 256; i++)
-        r->coeffs[i] = csubq(r->coeffs[i]);
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]); i++)
+        r->coeffs[i] = br_kyber_third_party_csubq(r->coeffs[i]);
 }
 
 /*************************************************
@@ -336,10 +301,10 @@ void poly_csubq(poly *r) {
 *            - const poly *a: pointer to first input polynomial
 *            - const poly *b: pointer to second input polynomial
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_add(poly *r, const poly *a, const poly *b) {
+void br_kyber_third_party_poly_add(br_kyber_third_party_poly *r, const br_kyber_third_party_poly *a,
+                                   const br_kyber_third_party_poly *b) {
     unsigned int i;
-    for (i = 0; i < 256; i++)
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]); i++)
         r->coeffs[i] = a->coeffs[i] + b->coeffs[i];
 }
 
@@ -352,9 +317,9 @@ void poly_add(poly *r, const poly *a, const poly *b) {
 *            - const poly *a: pointer to first input polynomial
 *            - const poly *b: pointer to second input polynomial
 **************************************************/
-// TODO remove magic number 256 in loop
-void poly_sub(poly *r, const poly *a, const poly *b) {
+void br_kyber_third_party_poly_sub(br_kyber_third_party_poly *r, const br_kyber_third_party_poly *a,
+                                   const br_kyber_third_party_poly *b) {
     unsigned int i;
-    for (i = 0; i < 256; i++)
+    for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]); i++)
         r->coeffs[i] = a->coeffs[i] - b->coeffs[i];
 }

@@ -1,9 +1,9 @@
-#ifndef CBD_H
-#define CBD_H
+#ifndef KYBER_CBD_H
+#define KYBER_CBD_H
 
 #include <stdint.h>
-#include "common_poly.h"
+#include "kyber_poly.h"
 
-void br_kyber_cbd(poly *r, const uint8_t *buf, size_t buflen);
+void br_kyber_third_party_cbd(br_kyber_third_party_poly *r, const uint8_t *buf);
 
 #endif

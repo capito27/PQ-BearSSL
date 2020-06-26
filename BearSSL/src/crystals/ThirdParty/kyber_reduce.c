@@ -13,17 +13,15 @@
 *
 * Returns:     integer in {-q+1,...,q-1} congruent to a * R^-1 modulo q.
 **************************************************/
-// TODO Remove magic number 3329
-int16_t montgomery_reduce(int32_t a)
-{
-  int32_t t;
-  int16_t u;
+int16_t br_kyber_third_party_montgomery_reduce(int32_t a) {
+    int32_t t;
+    int16_t u;
 
-  u = a*QINV;
-  t = (int32_t)u*3329;
-  t = a - t;
-  t >>= 16;
-  return t;
+    u = a * BR_KYBER_THIRD_PARTY_QINV;
+    t = (int32_t) u * BR_KYBER_THIRD_PARTY_Q;
+    t = a - t;
+    t >>= 16;
+    return t;
 }
 
 /*************************************************
@@ -36,14 +34,13 @@ int16_t montgomery_reduce(int32_t a)
 *
 * Returns:     integer in {0,...,q} congruent to a modulo q.
 **************************************************/
-// TODO Remove magic number 3329
-int16_t barrett_reduce(int16_t a) {
-  int16_t t;
-  const int16_t v = ((1U << 26) + 3329/2)/3329;
+int16_t br_kyber_third_party_barrett_reduce(int16_t a) {
+    int16_t t;
+    const int16_t v = ((1U << 26) + BR_KYBER_THIRD_PARTY_Q / 2) / BR_KYBER_THIRD_PARTY_Q;
 
-  t  = (int32_t)v*a >> 26;
-  t *= 3329;
-  return a - t;
+    t = (int32_t) v * a >> 26;
+    t *= BR_KYBER_THIRD_PARTY_Q;
+    return a - t;
 }
 
 /*************************************************
@@ -55,9 +52,8 @@ int16_t barrett_reduce(int16_t a) {
 *
 * Returns:     a - q if a >= q, else a
 **************************************************/
-// TODO Remove magic number 3329
-int16_t csubq(int16_t a) {
-  a -= 3329;
-  a += (a >> 15) & 3329;
-  return a;
+int16_t br_kyber_third_party_csubq(int16_t a) {
+    a -= BR_KYBER_THIRD_PARTY_Q;
+    a += (a >> 15) & BR_KYBER_THIRD_PARTY_Q;
+    return a;
 }

@@ -1,7 +1,7 @@
-#include "inc/common_ntt.h"
+#include "inc/kyber_ntt.h"
 #include "inc/kyber_reduce.h"
 
-const int16_t zetas[128] = {
+const int16_t br_kyber_third_party_zetas[128] = {
         2285, 2571, 2970, 1812, 1493, 1422, 287, 202, 3158, 622, 1577, 182, 962,
         2127, 1855, 1468, 573, 2004, 264, 383, 2500, 1458, 1727, 3199, 2648, 1017,
         732, 608, 1787, 411, 3124, 1758, 1223, 652, 2777, 1015, 2036, 1491, 3047,
@@ -14,7 +14,7 @@ const int16_t zetas[128] = {
         478, 3221, 3021, 996, 991, 958, 1869, 1522, 1628
 };
 
-const int16_t zetas_inv[128] = {
+const int16_t br_kyber_third_party_zetas_inv[128] = {
         1701, 1807, 1460, 2371, 2338, 2333, 308, 108, 2851, 870, 854, 1510, 2535,
         1278, 1530, 1185, 1659, 1187, 3109, 874, 1335, 2111, 136, 1215, 2945, 1465,
         1285, 2007, 2719, 2726, 2232, 2512, 75, 156, 3000, 2911, 2980, 872, 2685,
@@ -37,8 +37,8 @@ const int16_t zetas_inv[128] = {
 *
 * Returns 16-bit integer congruent to a*b*R^{-1} mod q
 **************************************************/
-static int16_t fqmul(int16_t a, int16_t b) {
-    return montgomery_reduce((int32_t)a*b);
+static int16_t br_kyber_third_party_fqmul(int16_t a, int16_t b) {
+    return br_kyber_third_party_montgomery_reduce((int32_t)a*b);
 }
 
 /*************************************************
@@ -51,16 +51,16 @@ static int16_t fqmul(int16_t a, int16_t b) {
 *                                of Zq
 **************************************************/
 //TODO use RLEN instead of magic numbers
-void ntt(int16_t *r, uint32_t rlen) {
+void br_kyber_third_party_ntt(int16_t *r, size_t rlen) {
     unsigned int len, start, j, k;
     int16_t t, zeta;
 
     k = 1;
-    for(len = 128; len >= 2; len >>= 1) {
-        for(start = 0; start < 256; start = j + len) {
-            zeta = zetas[k++];
+    for(len = rlen/2; len >= 2; len >>= 1) {
+        for(start = 0; start < rlen; start = j + len) {
+            zeta = br_kyber_third_party_zetas[k++];
             for(j = start; j < start + len; ++j) {
-                t = fqmul(zeta, r[j + len]);
+                t = br_kyber_third_party_fqmul(zeta, r[j + len]);
                 r[j + len] = r[j] - t;
                 r[j] = r[j] + t;
             }
@@ -78,26 +78,25 @@ void ntt(int16_t *r, uint32_t rlen) {
 * Arguments:   - int16_t r[256]: pointer to input/output vector of elements
 *                                of Zq
 **************************************************/
-//TODO use RLEN instead of magic numbers
-void invntt(int16_t *r, uint32_t rlen) {
+void br_kyber_third_party_invntt(int16_t *r, size_t rlen) {
     unsigned int start, len, j, k;
     int16_t t, zeta;
 
     k = 0;
-    for(len = 2; len <= 128; len <<= 1) {
-        for(start = 0; start < 256; start = j + len) {
-            zeta = zetas_inv[k++];
+    for(len = 2; len <= rlen/2; len <<= 1) {
+        for(start = 0; start < rlen; start = j + len) {
+            zeta = br_kyber_third_party_zetas_inv[k++];
             for(j = start; j < start + len; ++j) {
                 t = r[j];
-                r[j] = barrett_reduce(t + r[j + len]);
+                r[j] = br_kyber_third_party_barrett_reduce(t + r[j + len]);
                 r[j + len] = t - r[j + len];
-                r[j + len] = fqmul(zeta, r[j + len]);
+                r[j + len] = br_kyber_third_party_fqmul(zeta, r[j + len]);
             }
         }
     }
 
-    for(j = 0; j < 256; ++j)
-        r[j] = fqmul(r[j], zetas_inv[127]);
+    for(j = 0; j < rlen; ++j)
+        r[j] = br_kyber_third_party_fqmul(r[j], br_kyber_third_party_zetas_inv[127]);
 }
 
 /*************************************************
@@ -111,15 +110,15 @@ void invntt(int16_t *r, uint32_t rlen) {
 *              - const int16_t b[2]: pointer to the second factor
 *              - int16_t zeta:       integer defining the reduction polynomial
 **************************************************/
-void basemul(int16_t r[2],
+void br_kyber_third_party_basemul(int16_t r[2],
              const int16_t a[2],
              const int16_t b[2],
              int16_t zeta)
 {
-    r[0]  = fqmul(a[1], b[1]);
-    r[0]  = fqmul(r[0], zeta);
-    r[0] += fqmul(a[0], b[0]);
+    r[0]  = br_kyber_third_party_fqmul(a[1], b[1]);
+    r[0]  = br_kyber_third_party_fqmul(r[0], zeta);
+    r[0] += br_kyber_third_party_fqmul(a[0], b[0]);
 
-    r[1]  = fqmul(a[0], b[1]);
-    r[1] += fqmul(a[1], b[0]);
+    r[1]  = br_kyber_third_party_fqmul(a[0], b[1]);
+    r[1] += br_kyber_third_party_fqmul(a[1], b[0]);
 }

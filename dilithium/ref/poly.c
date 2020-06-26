@@ -6,6 +6,7 @@
 #include "reduce.h"
 #include "rounding.h"
 #include "poly.h"
+#include <stddef.h>
 
 #ifdef DBENCH
 extern const unsigned long long timing_overhead;
@@ -447,17 +448,31 @@ void poly_uniform_eta(poly *a,
                           + STREAM128_BLOCKBYTES) / STREAM128_BLOCKBYTES;
   unsigned int buflen = nblocks*STREAM128_BLOCKBYTES;
   unsigned char buf[buflen];
+  
   stream128_state state;
 
   stream128_init(&state, seed, nonce);
   stream128_squeezeblocks(buf, nblocks, &state);
+  
 
   ctr = rej_eta(a->coeffs, N, buf, buflen);
+  
 
   while(ctr < N) {
     stream128_squeezeblocks(buf, 1, &state);
     ctr += rej_eta(a->coeffs + ctr, N - ctr, buf, STREAM128_BLOCKBYTES);
   }
+}
+void t_keygen_print_hex_memory(void *mem, size_t length) {
+    size_t i;
+    unsigned char *p = (unsigned char *) mem;
+    for (i = 0; i < length; i++) {
+        printf("0x%02x ", p[i]);
+        if ((i % 16 == 15) && i < length)
+            printf("\n");
+    }
+    printf("\n");
+    return;
 }
 
 /*************************************************

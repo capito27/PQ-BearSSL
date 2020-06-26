@@ -259,9 +259,10 @@ void br_shake_inject(br_shake_context *sc, const void *data, size_t len);
  * This call terminates the input injection process, and starts the
  * output production process.
  *
- * \param sc   SHAKE context.
+ * \param sc        SHAKE context.
+ * \param is_sha3   set to 0 for normal shake output, otherwise will produce sha3 output
  */
-void br_shake_flip(br_shake_context *hc);
+void br_shake_flip(br_shake_context *hc, unsigned is_sha3);
 
 /**
  * \brief SHAKE output production.

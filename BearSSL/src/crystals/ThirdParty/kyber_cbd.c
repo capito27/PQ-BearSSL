@@ -11,7 +11,7 @@
 *
 * Returns 32-bit unsigned integer loaded from x
 **************************************************/
-static uint32_t load32_littleendian(const uint8_t x[4]) {
+static uint32_t br_kyber_third_party_load32_littleendian(const uint8_t x[4]) {
     uint32_t r;
     r = (uint32_t) x[0];
     r |= (uint32_t) x[1] << 8;
@@ -30,18 +30,13 @@ static uint32_t load32_littleendian(const uint8_t x[4]) {
 * Arguments:   - poly *r:            pointer to output polynomial
 *              - const uint8_t *buf: pointer to input byte array
 **************************************************/
-// TODO Remove magic number 256 from loop
-void br_kyber_cbd(poly *r, const uint8_t *buf, size_t buflen) {
-    if (buflen != 2 * 256 / 4) {
-        // TODO support error ? (return status code ?)
-        //#error "poly_getnoise in poly.c only supports eta=2"
-    } else {
+void br_kyber_third_party_cbd(br_kyber_third_party_poly *r, const uint8_t *buf) {
         unsigned int i, j;
         uint32_t t, d;
         int16_t a, b;
 
-        for (i = 0; i < 256 / 8; i++) {
-            t = load32_littleendian(buf + 4 * i);
+        for (i = 0; i < sizeof(r->coeffs) / sizeof(r->coeffs[0]) / 8; i++) {
+            t = br_kyber_third_party_load32_littleendian(buf + 4 * i);
             d = t & 0x55555555;
             d += (t >> 1) & 0x55555555;
 
@@ -51,5 +46,5 @@ void br_kyber_cbd(poly *r, const uint8_t *buf, size_t buflen) {
                 r->coeffs[8 * i + j] = a - b;
             }
         }
-    }
+
 }

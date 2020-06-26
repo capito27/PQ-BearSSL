@@ -57,11 +57,19 @@ extern "C" {
 /**
  * \brief Temporary flag to enable testing framework, to verify correctness of crypto.
  */
-//#define TESTING_KEYGEN
-//#define TESTING_ENC
-//#define TESTING_DEC
 
+// These define will stop the program after their specific function as well as force the RNG output to the define below
+//#define KYBER_TESTING_KEYGEN
+//#define KYBER_TESTING_ENC
+//#define KYBER_TESTING_DEC
 
+// This define sets the RNG to always simulate the return of the following byte (only when used with the testing macros)
+#define KYBER_RNG_OUTPUT_FORCE 0x66
+
+// These define will print the contents of the relevant data
+//#define KYBER_PRINT_KEYGEN
+//#define KYBER_PRINT_ENC
+//#define KYBER_PRINT_DEC
 
 
 /**
@@ -78,7 +86,11 @@ typedef struct {
     /** \brief polynomial vector length (in bytes). */
     size_t polyveclen;
     /** \brief Public seed. */
-    unsigned char seed[32];
+    unsigned char *seed;
+    /** \brief seed length (in bytes). */
+    size_t seedlen;
+    /** \brief number of polynomial in public key */
+    unsigned polynbr;
 } br_kyber_public_key;
 
 /**
@@ -90,16 +102,28 @@ typedef struct {
  * extra leading bytes of value 0 are NOT allowed.
  */
 typedef struct {
-    /** \brief compressed polynomial vector. */
-    unsigned char *polyvec;
-    /** \brief polynomial vector length (in bytes). */
-    size_t polyveclen;
-    /** \brief public key structure. */
-    br_kyber_public_key *pubkey;
+    /** \brief compressed secret polynomial vector. */
+    unsigned char *privec;
+    /** \brief vector length (in bytes). */
+    size_t priveclen;
+    /** \brief compressed public polynomial vector. */
+    unsigned char *pubvec;
+    /** \brief vector length (in bytes). */
+    size_t pubveclen;
+    /** \brief Public seed. */
+    unsigned char *seed;
+    /** \brief seed length (in bytes). */
+    size_t seedlen;
     /** \brief intermediary hash */
-    unsigned char hpk[32];
+    unsigned char *hpk;
+    /** \brief hash length (in bytes). */
+    size_t hpklen;
     /** \brief decapsulation fail seed */
-    unsigned char z[32];
+    unsigned char *z;
+    /** \brief seed length (in bytes). */
+    size_t zlen;
+    /** \brief number of polynomial in private key */
+    unsigned polynbr;
 } br_kyber_private_key;
 
 /**
@@ -115,15 +139,15 @@ typedef struct {
  *     if that length is lower than minimal ciphertext size
  *     expected by the public key length, then an error is reported.
  *
- *   - The shared secret buffer. Its maximum length (in bytes) is provided;
- *     if that length is lower than 32 bytes, then an error is reported.
+ *   - The shared secret buffer. Its length (in bytes) is provided;
+ *     if that length is NOT 32 bytes, then an error is reported.
  *
  * The ciphertext buffer (`ct`, length `ct_max_len`) may NOT overlap with the
  * shared secret buffer (`ss`, length `ss_max_len`).
  *
  * This function returns the actual ciphertext length, in bytes;
  * on error, zero is returned. An error is reported if the output buffer
- * is not large enough, or the shared secret buffer is not large enough,
+ * is not large enough, or the shared secret buffer is not properly sized,
  * or the public key is invalid.
  *
  * \param rnd          source of random bytes.
@@ -132,7 +156,7 @@ typedef struct {
  * \param ct_max_len   destination buffer length (maximum encrypted data size).
  * \param ss           message to encrypt.
  * \param ss_len       source message length (in bytes).
- * \return  encrypted message length (in bytes), or 0 on error.
+ * \return  ciphertext length (in bytes), or 0 on error.
  */
 typedef uint32_t (*br_kyber_encrypt)(
         const br_prng_class **rnd,
@@ -151,14 +175,14 @@ typedef uint32_t (*br_kyber_encrypt)(
  *     if that length is lower than minimal ciphertext size
  *     expected by the public key length, then an error is reported.
  *
- *   - The shared secret buffer. Its maximum length (in bytes) is provided;
- *     if that length is lower than 32 bytes, then an error is reported.
+ *   - The shared secret buffer. Its length (in bytes) is provided;
+ *     if that length is NOT equal to 32 bytes, then an error is reported.
  *
  * The ciphertext buffer (`ct`, length `ct_len`) may NOT overlap with the
- * shared secret buffer (`ss`, length `ss_max_len`).
+ * shared secret buffer (`ss`, length `ss_len`).
  *
  * on error, zero is returned. An error is reported if the ciphertext buffer
- * is not large enough, or the shared secret buffer is not large enough,
+ * is not large enough, or the shared secret buffer is not properly sized,
  * or decapsulation failed.
  *
  * on error, ss will be undetermined
@@ -168,11 +192,11 @@ typedef uint32_t (*br_kyber_encrypt)(
  * \param ss_len   shared secret buffer (in bytes).
  * \param ct       cipher text buffer buffer.
  * \param ct_len   cipher text length (in bytes).
- * \return  1 on success, 0 on error.
+ * \return  0 on success, 1 on error.
  */
 typedef uint32_t (*br_kyber_decrypt)(
         const br_kyber_private_key *sk,
-        void *ss, size_t ss_max_len,
+        void *ss, size_t ss_len,
         const void *ct, size_t ct_max_len);
 
 /**
@@ -208,8 +232,8 @@ uint32_t br_kyber_third_party_encrypt(
  */
 uint32_t br_kyber_third_party_decrypt(
         const br_kyber_private_key *sk,
-        void *ss, size_t ss_max_len,
-        const void *ct, size_t ct_max_len);
+        void *ss, size_t ss_len,
+        const void *ct, size_t ct_len);
 
 /**
  * \brief Get "default" Kyber implementation (encapsultation engine).
@@ -232,30 +256,54 @@ br_kyber_encrypt br_kyber_encrypt_get_default(void);
 br_kyber_decrypt br_kyber_decrypt_get_default(void);
 
 /**
- * \brief Get buffer size to hold Kyber polynomial vectors.
+ * \brief Get buffer size to hold Kyber public key material.
  *
  * This macro returns the length (in bytes) of the buffer needed to
- * receive a polynomial vector, as generated by one of
+ * receive a kyber public key, as generated by one of
  * the `br_kyber_*_keygen()` functions. If the provided count is a constant
  * expression, then the whole macro evaluates to a constant expression.
  *
  * \param count   target polynomial count, guaranteed valid from 2 to 4 (included)
  * \return  the length of the polynomial vector buffer, in bytes.
  */
-#define BR_KYBER_POLYVEC_SIZE(count)     (384 * (count))
+#define BR_KYBER_PUBLIC_KEY_SIZE(count)     (384u * (count) + 32u)
 
 /**
- * \brief Get the maximal number of polynomials that a buffer can hold
+ * \brief Get buffer size to hold Kyber private key material.
  *
- * This macro returns the number of polynomials that can fit in the buffer
- * , as used by one of the `br_kyber_*_encrypt()` or `br_kyber_*_decrypt()`
- * functions. If the provided size is a constant expression, then the whole
- * macro evaluates to a constant expression.
+ * This macro returns the length (in bytes) of the buffer needed to
+ * receive a kyber private key, as generated by one of
+ * the `br_kyber_*_keygen()` functions. If the provided count is a constant
+ * expression, then the whole macro evaluates to a constant expression.
  *
- * \param size   the length of the polynomial vector buffer, in bytes.
- * \return  target polynomial count, guaranteed valid from 2 to 4 (included)
+ * \param count   target polynomial count, guaranteed valid from 2 to 4 (included)
+ * \return  the length of the polynomial vector buffer, in bytes.
  */
-#define BR_KYBER_POLYVEC_COUNT(size)     ((size) / 384)
+#define BR_KYBER_PRIVATE_KEY_SIZE(count)     (384u * (count) * 2u + 32u * 3u)
+
+/**
+ * \brief Get Kyber polynomial count based on a public key size.
+ *
+ * This macro returns maximal number of Kyber polynomials that can fit
+ * inside of the given public key size. If the provided size is a constant
+ * expression, then the whole macro evaluates to a constant expression.
+ *
+ * \param size   size of a kyber public key buffer
+ * \return   the maximal amount of polynomials able to fit.
+ */
+#define BR_KYBER_PUBLIC_KEY_POLYNOMIAL_COUNT(size)     (((size) - 32u) / 384u)
+
+/**
+ * \brief Get Kyber polynomial count based on a private key size.
+ *
+ * This macro returns maximal number of Kyber polynomials that can fit
+ * inside of the given private key size. If the provided size is a constant
+ * expression, then the whole macro evaluates to a constant expression.
+ *
+ * \param size   size of a kyber private key buffer
+ * \return   the maximal amount of polynomials able to fit.
+ */
+#define BR_KYBER_PRIVATE_KEY_POLYNOMIAL_COUNT(size)     (((size) - 32u * 3u) / 384u / 2u)
 
 /**
  * \brief Get the buffer size to hold Kyber ciphertexts
@@ -265,10 +313,10 @@ br_kyber_decrypt br_kyber_decrypt_get_default(void);
  * or `br_kyber_*_decrypt()` * functions. If the provided count is a
  * constant expression, then the whole macro evaluates to a constant expression.
  *
- * \param count   target polynomial count, guaranteed valid from 2 to 4 (included)the length of the polynomial vector key buffer, in bytes.
+ * \param count   target polynomial count, guaranteed valid from 2 to 4 (included)
  * \return  the length of the ciphertext buffer, in bytes.
  */
-#define BR_KYBER_CIPHERTEXT_SIZE(count) ((((count) + 1) * 32) + (count) * ((count) < 4 ? 320 : 352))
+#define BR_KYBER_CIPHERTEXT_SIZE(count) ((((count) + 1u) * 32u) + (count) * ((count) < 4u ? 320u : 352u))
 
 
 /**
@@ -293,6 +341,8 @@ br_kyber_decrypt br_kyber_decrypt_get_default(void);
  * if the requested count is outside of the supported key sizes. Supported
  * range starts at 2 polynomials, and up to an implementation-defined
  * maximum (by default 4 polynomials).
+ *
+ * This function SHALL only be given a pair of properly sized buffers.
  *
  * \param rng_ctx     source PRNG context (already initialized)
  * \param sk          Kyber private key structure (destination)

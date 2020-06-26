@@ -20,18 +20,29 @@ OBJ = \
  $(OBJDIR)$Penc64le$O \
  $(OBJDIR)$Ppemdec$O \
  $(OBJDIR)$Ppemenc$O \
+ $(OBJDIR)$Pdilithium_default_keygen$O \
+ $(OBJDIR)$Pdilithium_default_sign$O \
+ $(OBJDIR)$Pdilithium_default_verify$O \
+ $(OBJDIR)$Pdilithium_third_party_keygen$O \
+ $(OBJDIR)$Pdilithium_third_party_sign$O \
+ $(OBJDIR)$Pdilithium_third_party_verify$O \
  $(OBJDIR)$Pkyber_default_decrypt$O \
  $(OBJDIR)$Pkyber_default_encrypt$O \
  $(OBJDIR)$Pkyber_default_keygen$O \
  $(OBJDIR)$Pkyber_third_party_decrypt$O \
  $(OBJDIR)$Pkyber_third_party_encrypt$O \
  $(OBJDIR)$Pkyber_third_party_keygen$O \
- $(OBJDIR)$Pcommon_ntt$O \
- $(OBJDIR)$Pcommon_poly$O \
- $(OBJDIR)$Pcommon_polyvec$O \
+ $(OBJDIR)$Pdilithium_ntt$O \
+ $(OBJDIR)$Pdilithium_packing$O \
+ $(OBJDIR)$Pdilithium_poly$O \
+ $(OBJDIR)$Pdilithium_polyvec$O \
+ $(OBJDIR)$Pdilithium_reduce$O \
+ $(OBJDIR)$Pdilithium_rounding$O \
+ $(OBJDIR)$Pkyber_ntt$O \
+ $(OBJDIR)$Pkyber_poly$O \
+ $(OBJDIR)$Pkyber_polyvec$O \
  $(OBJDIR)$Pkyber_cbd$O \
  $(OBJDIR)$Pkyber_reduce$O \
- $(OBJDIR)$Ptiny_sha3$O \
  $(OBJDIR)$Pec_all_m15$O \
  $(OBJDIR)$Pec_all_m31$O \
  $(OBJDIR)$Pec_c25519_i15$O \
@@ -444,6 +455,24 @@ $(OBJDIR)$Ppemdec$O: src$Pcodec$Ppemdec.c $(HEADERSPRIV)
 $(OBJDIR)$Ppemenc$O: src$Pcodec$Ppemenc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ppemenc$O src$Pcodec$Ppemenc.c
 
+$(OBJDIR)$Pdilithium_default_keygen$O: src$Pcrystals$Pdilithium_default_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_keygen$O src$Pcrystals$Pdilithium_default_keygen.c
+
+$(OBJDIR)$Pdilithium_default_sign$O: src$Pcrystals$Pdilithium_default_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_sign$O src$Pcrystals$Pdilithium_default_sign.c
+
+$(OBJDIR)$Pdilithium_default_verify$O: src$Pcrystals$Pdilithium_default_verify.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_verify$O src$Pcrystals$Pdilithium_default_verify.c
+
+$(OBJDIR)$Pdilithium_third_party_keygen$O: src$Pcrystals$Pdilithium_third_party_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_keygen$O src$Pcrystals$Pdilithium_third_party_keygen.c
+
+$(OBJDIR)$Pdilithium_third_party_sign$O: src$Pcrystals$Pdilithium_third_party_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_sign$O src$Pcrystals$Pdilithium_third_party_sign.c
+
+$(OBJDIR)$Pdilithium_third_party_verify$O: src$Pcrystals$Pdilithium_third_party_verify.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_verify$O src$Pcrystals$Pdilithium_third_party_verify.c
+
 $(OBJDIR)$Pkyber_default_decrypt$O: src$Pcrystals$Pkyber_default_decrypt.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_default_decrypt$O src$Pcrystals$Pkyber_default_decrypt.c
 
@@ -462,23 +491,38 @@ $(OBJDIR)$Pkyber_third_party_encrypt$O: src$Pcrystals$Pkyber_third_party_encrypt
 $(OBJDIR)$Pkyber_third_party_keygen$O: src$Pcrystals$Pkyber_third_party_keygen.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_third_party_keygen$O src$Pcrystals$Pkyber_third_party_keygen.c
 
-$(OBJDIR)$Pcommon_ntt$O: src$Pcrystals$PThirdParty$Pcommon_ntt.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcommon_ntt$O src$Pcrystals$PThirdParty$Pcommon_ntt.c
+$(OBJDIR)$Pdilithium_ntt$O: src$Pcrystals$PThirdParty$Pdilithium_ntt.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_ntt$O src$Pcrystals$PThirdParty$Pdilithium_ntt.c
 
-$(OBJDIR)$Pcommon_poly$O: src$Pcrystals$PThirdParty$Pcommon_poly.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcommon_poly$O src$Pcrystals$PThirdParty$Pcommon_poly.c
+$(OBJDIR)$Pdilithium_packing$O: src$Pcrystals$PThirdParty$Pdilithium_packing.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_packing$O src$Pcrystals$PThirdParty$Pdilithium_packing.c
 
-$(OBJDIR)$Pcommon_polyvec$O: src$Pcrystals$PThirdParty$Pcommon_polyvec.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pcommon_polyvec$O src$Pcrystals$PThirdParty$Pcommon_polyvec.c
+$(OBJDIR)$Pdilithium_poly$O: src$Pcrystals$PThirdParty$Pdilithium_poly.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_poly$O src$Pcrystals$PThirdParty$Pdilithium_poly.c
+
+$(OBJDIR)$Pdilithium_polyvec$O: src$Pcrystals$PThirdParty$Pdilithium_polyvec.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_polyvec$O src$Pcrystals$PThirdParty$Pdilithium_polyvec.c
+
+$(OBJDIR)$Pdilithium_reduce$O: src$Pcrystals$PThirdParty$Pdilithium_reduce.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_reduce$O src$Pcrystals$PThirdParty$Pdilithium_reduce.c
+
+$(OBJDIR)$Pdilithium_rounding$O: src$Pcrystals$PThirdParty$Pdilithium_rounding.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_rounding$O src$Pcrystals$PThirdParty$Pdilithium_rounding.c
+
+$(OBJDIR)$Pkyber_ntt$O: src$Pcrystals$PThirdParty$Pkyber_ntt.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_ntt$O src$Pcrystals$PThirdParty$Pkyber_ntt.c
+
+$(OBJDIR)$Pkyber_poly$O: src$Pcrystals$PThirdParty$Pkyber_poly.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_poly$O src$Pcrystals$PThirdParty$Pkyber_poly.c
+
+$(OBJDIR)$Pkyber_polyvec$O: src$Pcrystals$PThirdParty$Pkyber_polyvec.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_polyvec$O src$Pcrystals$PThirdParty$Pkyber_polyvec.c
 
 $(OBJDIR)$Pkyber_cbd$O: src$Pcrystals$PThirdParty$Pkyber_cbd.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_cbd$O src$Pcrystals$PThirdParty$Pkyber_cbd.c
 
 $(OBJDIR)$Pkyber_reduce$O: src$Pcrystals$PThirdParty$Pkyber_reduce.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_reduce$O src$Pcrystals$PThirdParty$Pkyber_reduce.c
-
-$(OBJDIR)$Ptiny_sha3$O: src$Pcrystals$PThirdParty$Ptiny_sha3.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ptiny_sha3$O src$Pcrystals$PThirdParty$Ptiny_sha3.c
 
 $(OBJDIR)$Pec_all_m15$O: src$Pec$Pec_all_m15.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pec_all_m15$O src$Pec$Pec_all_m15.c

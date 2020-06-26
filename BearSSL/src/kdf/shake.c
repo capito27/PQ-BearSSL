@@ -512,7 +512,7 @@ br_shake_inject(br_shake_context *sc, const void *data, size_t len)
 
 /* see bearssl_kdf.h */
 void
-br_shake_flip(br_shake_context *sc)
+br_shake_flip(br_shake_context *sc, unsigned is_sha3)
 {
 	/*
 	 * We apply padding and pre-XOR the value into the state. We
@@ -522,7 +522,7 @@ br_shake_flip(br_shake_context *sc)
 	if ((sc->dptr + 1) == sc->rate) {
 		sc->dbuf[sc->dptr ++] = 0x9F;
 	} else {
-		sc->dbuf[sc->dptr ++] = 0x1F;
+		sc->dbuf[sc->dptr ++] = is_sha3 ? 0x06 : 0x1F;
 		memset(sc->dbuf + sc->dptr, 0x00, sc->rate - sc->dptr - 1);
 		sc->dbuf[sc->rate - 1] = 0x80;
 		sc->dptr = sc->rate;

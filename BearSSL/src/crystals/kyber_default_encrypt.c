@@ -1,7 +1,6 @@
-
 #include "inner.h"
 
-/* see bearssl_rsa.h */
+/* see bearssl_kyber.h */
 br_kyber_encrypt
 br_kyber_encrypt_get_default(void)
 {

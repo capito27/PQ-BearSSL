@@ -68,18 +68,29 @@ coresrc=" \
 	src/codec/enc64le.c \
 	src/codec/pemdec.c \
 	src/codec/pemenc.c \
+	src/crystals/dilithium_default_keygen.c \
+	src/crystals/dilithium_default_sign.c \
+	src/crystals/dilithium_default_verify.c \
+	src/crystals/dilithium_third_party_keygen.c \
+	src/crystals/dilithium_third_party_sign.c \
+	src/crystals/dilithium_third_party_verify.c \
 	src/crystals/kyber_default_decrypt.c \
 	src/crystals/kyber_default_encrypt.c \
 	src/crystals/kyber_default_keygen.c \
 	src/crystals/kyber_third_party_decrypt.c \
 	src/crystals/kyber_third_party_encrypt.c \
 	src/crystals/kyber_third_party_keygen.c \
-	src/crystals/ThirdParty/common_ntt.c \
-	src/crystals/ThirdParty/common_poly.c \
-	src/crystals/ThirdParty/common_polyvec.c \
+	src/crystals/ThirdParty/dilithium_ntt.c \
+	src/crystals/ThirdParty/dilithium_packing.c \
+	src/crystals/ThirdParty/dilithium_poly.c \
+	src/crystals/ThirdParty/dilithium_polyvec.c \
+	src/crystals/ThirdParty/dilithium_reduce.c \
+	src/crystals/ThirdParty/dilithium_rounding.c \
+	src/crystals/ThirdParty/kyber_ntt.c \
+	src/crystals/ThirdParty/kyber_poly.c \
+	src/crystals/ThirdParty/kyber_polyvec.c \
 	src/crystals/ThirdParty/kyber_cbd.c \
 	src/crystals/ThirdParty/kyber_reduce.c \
-	src/crystals/ThirdParty/tiny_sha3.c \
 	src/ec/ec_all_m15.c \
 	src/ec/ec_all_m31.c \
 	src/ec/ec_c25519_i15.c \

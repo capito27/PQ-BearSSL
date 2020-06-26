@@ -3,6 +3,27 @@
 
 #include "config.h"
 
+///////////// TESTING ///////////////
+
+// This define can be used to force a security level
+#define MODE 4
+
+// These define will stop the program after their specific function as well as force the RNG output to the define below
+//#define DILITHIUM_TESTING_KEYGEN
+//#define DILITHIUM_TESTING_SIGN
+#define DILITHIUM_TESTING_VERIFY
+
+// This define sets the RNG to always simulate the return of the following byte
+#define DILITHIUM_RNG_OUTPUT_FORCE 0x66
+
+// These define will print the contents of the relevant data
+#define DILITHIUM_PRINT_KEYGEN
+#define DILITHIUM_PRINT_SIGN
+#define DILITHIUM_PRINT_VERIFY
+
+///////////// TESTING ///////////////
+
+
 #define SEEDBYTES 32
 #define CRHBYTES 48
 #define N 256
@@ -13,6 +34,7 @@
 #define GAMMA1 ((Q - 1)/16)
 #define GAMMA2 (GAMMA1/2)
 #define ALPHA (2*GAMMA2)
+
 
 #if MODE == 1
 #define K 3

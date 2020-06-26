@@ -52,7 +52,7 @@ int main(void)
 #endif
 
     tsign[i] = cpucycles_start();
-    crypto_sign(sm, &smlen, m, MLEN, sk);
+    crypto_sign(sm, &smlen, "THIS IS A DILITHIUM TEST SIGN MESSAGE", strlen("THIS IS A DILITHIUM TEST SIGN MESSAGE"), sk);
     tsign[i] = cpucycles_stop() - tsign[i] - timing_overhead;
 
 #ifdef DBENCH
@@ -68,13 +68,13 @@ int main(void)
       return -1;
     }
 
-    if(mlen != MLEN) {
+    if(mlen != strlen("THIS IS A DILITHIUM TEST SIGN MESSAGE")) {
       printf("Message lengths don't match\n");
       return -1;
     }
 
     for(j = 0; j < mlen; ++j) {
-      if(m[j] != m2[j]) {
+      if("THIS IS A DILITHIUM TEST SIGN MESSAGE"[j] != m2[j]) {
         printf("Messages don't match\n");
         return -1;
       }

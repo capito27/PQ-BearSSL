@@ -1,8 +1,8 @@
 #include "inner.h"
-#include "ThirdParty/inc/tiny_sha3.h"
-#include "ThirdParty/inc/common_poly.h"
-#include "ThirdParty/inc/common_polyvec.h"
+#include "ThirdParty/inc/kyber_poly.h"
+#include "ThirdParty/inc/kyber_polyvec.h"
 #include "ThirdParty/inc/kyber_cbd.h"
+#include "ThirdParty/inc/kyber_reduce.h"
 
 /*************************************************
 * Name:        rej_uniform
@@ -19,11 +19,10 @@
 *
 * Returns number of sampled 16-bit integers (at most len)
 **************************************************/
-// TODO remove magic number 3329
-static unsigned int rej_uniform_row(int16_t *r,
-                                    unsigned int len,
-                                    const uint8_t *buf,
-                                    unsigned int buflen) {
+static unsigned int rej_uniform(int16_t *r,
+                                unsigned int len,
+                                const uint8_t *buf,
+                                unsigned int buflen) {
     unsigned int ctr, pos;
     uint16_t val;
 
@@ -32,8 +31,8 @@ static unsigned int rej_uniform_row(int16_t *r,
         val = buf[pos] | ((uint16_t) buf[pos + 1] << 8);
         pos += 2;
 
-        if (val < 19 * 3329) {
-            val -= (val >> 12) * 3329; // Barrett reduction
+        if (val < 19 * BR_KYBER_THIRD_PARTY_Q) {
+            val -= (val >> 12) * BR_KYBER_THIRD_PARTY_Q; // Barrett reduction
             r[ctr++] = (int16_t) val;
         }
     }
@@ -41,15 +40,14 @@ static unsigned int rej_uniform_row(int16_t *r,
     return ctr;
 }
 
-#define GEN_MATRIX_NBLOCKS ((2*256*(1U << 16)/(19*3329) \
+#define GEN_MATRIX_NBLOCKS ((2*256*(1U << 16)/(19*BR_KYBER_THIRD_PARTY_Q) \
                              + 168))
 
 // TODO check polyvec matrix length validity, remove magic numbers
-void gen_matrix_row(polyvec *a, size_t row_nb, const uint8_t *seed, size_t seedlen) {
+static void gen_matrix_row(br_kyber_third_party_polyvec *a, size_t row_nb, const uint8_t *seed, size_t seedlen) {
     unsigned int ctr, j;
     uint8_t buf[GEN_MATRIX_NBLOCKS];
     br_shake_context sc;
-
 
     for (j = 0; j < a->veclen; j++) {
         // Reset the shake state for run
@@ -57,154 +55,21 @@ void gen_matrix_row(polyvec *a, size_t row_nb, const uint8_t *seed, size_t seedl
         br_shake_inject(&sc, seed, seedlen);
         br_shake_inject(&sc, &j, 1);
         br_shake_inject(&sc, &row_nb, 1);
-        br_shake_flip(&sc);
+        br_shake_flip(&sc, 0);
         br_shake_produce(&sc, buf, GEN_MATRIX_NBLOCKS);
-        ctr = rej_uniform_row(a->vec[j].coeffs, 256, buf, sizeof(buf));
+        ctr = rej_uniform(a->vec[j].coeffs, 256, buf, sizeof(buf));
 
         while (ctr < 256) {
             br_shake_produce(&sc, buf, sc.rate);
-            ctr += rej_uniform_row(a->vec[j].coeffs + ctr, 256 - ctr, buf, sc.rate);
+            ctr += rej_uniform(a->vec[j].coeffs + ctr, 256 - ctr, buf, sc.rate);
         }
     }
 }
 
-uint32_t
-br_kyber_third_party_keygen(const br_prng_class **rng_ctx,
-                            br_kyber_private_key *sk, void *kbuf_priv,
-                            br_kyber_public_key *pk, void *kbuf_pub,
-                            unsigned count) {
-    unsigned int i, ctr;
-    unsigned char tmp[2 * 32];
-    unsigned char tmp2[2 * 256 / 4];
-    // We need at least 4 polyvect, of at least count polynomials.
-    // Thus, we MUST restrict the maximal value of count a fair bit
-    // Due to kyber1024 begin the maximum security standard, count will be limited to 4
-    poly temp[4 * 4];
-    polyvec priv, pub, e, a;
-    br_shake_context sc;
-    sha3_ctx_t sha3ctx;
-
-    if (count < 2 || count > 4) {
-        return -1;
-    }
-
-    sk->polyvec = kbuf_priv;
-    sk->polyveclen = BR_KYBER_POLYVEC_SIZE(count);
-    sk->pubkey = pk;
-
-    pk->polyveclen = BR_KYBER_POLYVEC_SIZE(count);
-    pk->polyvec = kbuf_pub;
-
-    priv.vec = temp;
-    priv.veclen = count;
-
-    pub.vec = temp + 4;
-    pub.veclen = count;
-
-    e.vec = temp + 8;
-    e.veclen = count;
-
-    a.vec = temp + 12;
-    a.veclen = count;
-
-    (*rng_ctx)->generate(rng_ctx, tmp, 32);
-
-#ifdef TESTING_KEYGEN
-    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
-        memset(tmp, 0, 32);
-#endif
-#ifdef TESTING_ENC
-    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
-        memset(tmp, 0, 32);
-#endif
-#ifdef TESTING_DEC
-    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
-        memset(tmp, 0, 32);
-#endif
-
-    sha3_init(&sha3ctx, 2 * 32);
-    sha3_update(&sha3ctx, tmp, 32);
-    sha3_final(tmp, &sha3ctx);
-
-
-
-    //Initialize the secret key
-    for (i = 0; i < priv.veclen; i++, ctr++) {
-        br_shake_init(&sc, 256);
-        br_shake_inject(&sc, tmp + 32, 32);
-        br_shake_inject(&sc, &ctr, 1);
-        br_shake_flip(&sc);
-        br_shake_produce(&sc, tmp2, 2 * 256 / 4);
-        br_kyber_cbd(&priv.vec[i], tmp2, 2 * 256 / 4);
-    }
-
-    //Initialize the ephemeral polyvec
-    for (i = 0; i < e.veclen; i++, ctr++) {
-        br_shake_init(&sc, 256);
-        br_shake_inject(&sc, tmp + 32, 32);
-        br_shake_inject(&sc, &ctr, 1);
-        br_shake_flip(&sc);
-        br_shake_produce(&sc, tmp2, 2 * 256 / 4);
-        br_kyber_cbd(&e.vec[i], tmp2, 2 * 256 / 4);
-    }
-
-    polyvec_ntt(&priv);
-    polyvec_ntt(&e);
-
-    // matrix-vector multiplication
-    for (i = 0; i < pub.veclen; i++) {
-        gen_matrix_row(&a, i, tmp, 32);
-        polyvec_pointwise_acc_montgomery(&pub.vec[i], &a, &priv);
-        poly_tomont(&pub.vec[i]);
-    }
-
-    polyvec_add(&pub, &pub, &e);
-    polyvec_reduce(&pub);
-
-    // Pack the public key
-    polyvec_tobytes(kbuf_pub, BR_KYBER_POLYVEC_SIZE(count), &pub);
-    memcpy(pk->seed, tmp, sizeof(pk->seed));
-
-    // Pack the private key
-    polyvec_tobytes(kbuf_priv, BR_KYBER_POLYVEC_SIZE(count), &priv);
-    sha3_init(&sha3ctx, 32);
-    sha3_update(&sha3ctx, kbuf_pub, BR_KYBER_POLYVEC_SIZE(count));
-    sha3_update(&sha3ctx, pk->seed, sizeof(pk->seed));
-    sha3_final(sk->hpk, &sha3ctx);
-
-    (*rng_ctx)->generate(rng_ctx, sk->z, 32);
-
-#ifdef TESTING_KEYGEN
-    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
-        memset(sk->z, 0, 32);
-#endif
-#ifdef TESTING_ENC
-    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
-        memset(sk->z, 0, 32);
-#endif
-#ifdef TESTING_DEC
-    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
-        memset(sk->z, 0, 32);
-#endif
-
-#ifdef TESTING_KEYGEN
-    // Print the full memory contents of the private and public key
-    printf("public key (%d bytes):\n", pk->polyveclen);
-    keygen_print_hex_memory(pk->polyvec, pk->polyveclen);
-    printf("public key seed (%d bytes):\n", sizeof(pk->seed));
-    keygen_print_hex_memory(pk->seed, sizeof(pk->seed));
-
-    printf("private key (%d bytes):\n", sk->polyveclen);
-    keygen_print_hex_memory(sk->polyvec, sk->polyveclen);
-    printf("private key hpk (%d bytes):\n", sizeof(sk->hpk));
-    keygen_print_hex_memory(sk->hpk, sizeof(sk->hpk));
-    printf("private key z (%d bytes):\n", sizeof(sk->z));
-    keygen_print_hex_memory(sk->z, sizeof(sk->z));
-    exit(-1);
-}
-
-void keygen_print_hex_memory(void *mem, size_t length) {
-    int i;
+#ifdef KYBER_PRINT_KEYGEN
+#include <stdio.h>
+static void print_hex_memory(void *mem, size_t length) {
+    size_t i;
     unsigned char *p = (unsigned char *) mem;
     for (i = 0; i < length; i++) {
         printf("0x%02x ", p[i]);
@@ -212,6 +77,138 @@ void keygen_print_hex_memory(void *mem, size_t length) {
             printf("\n");
     }
     printf("\n");
+}
 #endif
+
+// Macro to easily map contiguous buffer segments to a key section
+#define buff_to_key(dst, src, size) dst = src; dst##len = size; src += dst##len;
+
+// Macro to easily map contiguous buffer segments to a polyvec
+#define polyarr_to_polyvec(dst, prev, size) dst.vec = prev.vec + prev.veclen; dst.veclen = size;
+
+uint32_t br_kyber_third_party_keygen(const br_prng_class **rng_ctx,
+                                     br_kyber_private_key *sk, void *kbuf_priv,
+                                     br_kyber_public_key *pk, void *kbuf_pub,
+                                     unsigned count) {
+    unsigned int i, ctr;
+    unsigned char tmp[2 * 32];
+    unsigned char tmp2[2 * 256 / 4];
+    // We need at least 4 polyvect, of at least count polynomials.
+    // Thus, we MUST restrict the maximal value of count a fair bit
+    // Due to kyber1024 begin the maximum security standard, count will be limited to 4
+    br_kyber_third_party_poly temp[4 * 4];
+    br_kyber_third_party_polyvec priv, pub, e, a;
+    br_shake_context sc;
+
+    if (count < 2 || count > 4) {
+        return -1;
+    }
+    // Map private and public kbufs to key material
+    buff_to_key(sk->privec, kbuf_priv, 384 * count);
+    buff_to_key(sk->pubvec, kbuf_priv, 384 * count);
+    buff_to_key(sk->seed, kbuf_priv, 32);
+    buff_to_key(sk->hpk, kbuf_priv, 32);
+    buff_to_key(sk->z, kbuf_priv, 32);
+    sk->polynbr = count;
+
+    buff_to_key(pk->polyvec, kbuf_pub, 384 * count);
+    buff_to_key(pk->seed, kbuf_pub, 32);
+    pk->polynbr = count;
+
+    // Map local polynomial vectors to the local polynomial array
+    priv.vec = temp;
+    priv.veclen = count;
+    polyarr_to_polyvec(pub, priv, count);
+    polyarr_to_polyvec(e, pub, count);
+    polyarr_to_polyvec(a, e, count);
+
+    (*rng_ctx)->generate(rng_ctx, tmp, 32);
+
+#if defined KYBER_TESTING_KEYGEN || defined KYBER_TESTING_ENC || defined KYBER_TESTING_DEC
+    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
+        memset(tmp, KYBER_RNG_OUTPUT_FORCE, 32);
+#endif
+
+    // Hide system random by hashing it
+    br_shake_init(&sc, 512);
+    br_shake_inject(&sc, tmp, 32);
+    br_shake_flip(&sc, 1);
+    br_shake_produce(&sc, tmp, 64);
+
+    //Initialize the secret key
+    for (i = 0; i < priv.veclen; i++, ctr++) {
+        br_shake_init(&sc, 256);
+        br_shake_inject(&sc, tmp + 32, 32);
+        br_shake_inject(&sc, &ctr, 1);
+        br_shake_flip(&sc, 0);
+        br_shake_produce(&sc, tmp2, 128);
+        br_kyber_third_party_cbd(&priv.vec[i], tmp2);
+    }
+
+    //Initialize the ephemeral polyvec
+    for (i = 0; i < e.veclen; i++, ctr++) {
+        br_shake_init(&sc, 256);
+        br_shake_inject(&sc, tmp + 32, 32);
+        br_shake_inject(&sc, &ctr, 1);
+        br_shake_flip(&sc, 0);
+        br_shake_produce(&sc, tmp2, 128);
+        br_kyber_third_party_cbd(&e.vec[i], tmp2);
+    }
+
+    br_kyber_third_party_polyvec_ntt(&priv);
+    br_kyber_third_party_polyvec_ntt(&e);
+
+    // matrix-vector multiplication
+    for (i = 0; i < pub.veclen; i++) {
+        gen_matrix_row(&a, i, tmp, 32);
+        br_kyber_third_party_polyvec_pointwise_acc_montgomery(&pub.vec[i], &a, &priv);
+        br_kyber_third_party_poly_tomont(&pub.vec[i]);
+    }
+
+    br_kyber_third_party_polyvec_add(&pub, &pub, &e);
+    br_kyber_third_party_polyvec_reduce(&pub);
+
+    // Pack the public key
+    br_kyber_third_party_polyvec_tobytes(pk->polyvec, &pub);
+    memcpy(pk->seed, tmp, pk->seedlen);
+
+    // Pack the private key and copy the public key material
+    br_kyber_third_party_polyvec_tobytes(sk->privec, &priv);
+    br_shake_init(&sc, 256);
+    br_shake_inject(&sc, pk->polyvec, pk->polyveclen);
+    br_shake_inject(&sc, pk->seed, pk->seedlen);
+    br_shake_flip(&sc, 1);
+    br_shake_produce(&sc, sk->hpk, sk->hpklen);
+    memcpy(sk->seed, pk->seed, pk->seedlen);
+    memcpy(sk->pubvec, pk->polyvec, pk->polyveclen);
+
+    (*rng_ctx)->generate(rng_ctx, sk->z, sk->zlen);
+
+#if defined KYBER_TESTING_KEYGEN || defined KYBER_TESTING_ENC || defined KYBER_TESTING_DEC
+    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
+        memset(sk->z, KYBER_RNG_OUTPUT_FORCE, 32);
+#endif
+
+#ifdef KYBER_PRINT_KEYGEN
+    printf("///////////// KEYGEN /////////////\n");
+    // Print the full memory contents of the private and public key
+    printf("public key (%ld bytes):\n", pk->polyveclen);
+    print_hex_memory(pk->polyvec, pk->polyveclen);
+    printf("public key seed (%ld bytes):\n", pk->seedlen);
+    print_hex_memory(pk->seed, pk->seedlen);
+
+    printf("private key (%ld bytes):\n", sk->priveclen);
+    print_hex_memory(sk->privec, sk->priveclen);
+    printf("private key hpk (%ld bytes):\n", sk->hpklen);
+    print_hex_memory(sk->hpk, sk->hpklen);
+    printf("private key z (%ld bytes):\n", sk->zlen);
+    print_hex_memory(sk->z, sk->zlen);
+    printf("/////////// KEYGEN END ///////////\n");
+#endif
+
+#ifdef KYBER_TESTING_KEYGEN
+    exit(-1);
+#endif
+
     return 0;
 }
