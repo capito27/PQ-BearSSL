@@ -1,0 +1,59 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Launch server",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/server_basic",
+            "args": ["8888"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "presentation": {
+              "panel": "shared"
+            },
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Launch client",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/client_basic",
+            "args": ["localhost", "8888"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "presentation": {
+              "panel": "shared"
+            },
+            "preLaunchTask": "Sleepdelay",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ],
+    "compounds": [
+        {
+          "name": "(gdb) both",
+          "configurations": ["(gdb) Launch server", "(gdb) Launch client"]
+        }
+      ]
+}

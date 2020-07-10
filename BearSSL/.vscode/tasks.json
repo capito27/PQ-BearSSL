@@ -1,0 +1,87 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+          {
+            "type": "shell",
+            "label": "Build bearssl T0",
+            "command": "/usr/bin/make",
+            "args": ["T0","-j8", "CFLAGS='-g'"],
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build",
+            "presentation": {
+              "panel": "shared"
+          }
+        },
+        {
+            "type": "shell",
+            "label": "Build bearssl",
+            "dependsOn": ["Build bearssl T0"],
+            "command": "/usr/bin/make",
+            "args": ["lib","-j8", "CFLAGS='-g'"],
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build",
+            "presentation": {
+              "panel": "shared"
+          }
+        },
+        {
+            "type": "shell",
+            "label": "Build client",
+            "dependsOn": ["Build bearssl"],
+            "command": "/usr/bin/g++",
+            "args": ["samples/client_basic.c", "-g" ,"-Iinc/", "-Lbuild/", "-l:libbearssl.a", "-o", "client_basic"],
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build",
+            "presentation": {
+              "reveal": "silent",
+              "panel": "shared"
+          }
+        },
+        {
+            "type": "shell",
+            "label": "Build server",
+            "dependsOn": ["Build bearssl"],
+            "command": "/usr/bin/g++",
+            "args": ["samples/server_basic.c", "-g" ,"-Iinc/", "-Lbuild/", "-l:libbearssl.a", "-o", "server_basic"],
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build",
+            "presentation": {
+              "reveal": "silent",
+              "panel": "shared"
+          }
+        },
+        {
+            "label": "BuildAll",
+            "dependsOn": ["Build client", "Build server"],
+            "group": {
+                "kind" :"build",
+                "isDefault": true
+          }
+        },
+        {
+          "label": "Sleepdelay",
+          "type": "shell",
+          "command": "sleep 1",
+          "windows": {
+              "command": "ping 127.0.0.1 -n 1 > nul"
+          },
+          "group": "none",
+          "presentation": {
+              "reveal": "silent",
+              "panel": "shared"
+          }
+      }
+    ]
+  }
