@@ -283,6 +283,7 @@ coresrc=" \
 	src/ssl/ssl_engine_default_descbc.c \
 	src/ssl/ssl_engine_default_ec.c \
 	src/ssl/ssl_engine_default_ecdsa.c \
+	src/ssl/ssl_engine_default_kyber.c \
 	src/ssl/ssl_engine_default_rsavrfy.c \
 	src/ssl/ssl_hashes.c \
 	src/ssl/ssl_hs_client.c \
@@ -294,9 +295,11 @@ coresrc=" \
 	src/ssl/ssl_rec_ccm.c \
 	src/ssl/ssl_rec_chapol.c \
 	src/ssl/ssl_rec_gcm.c \
+	src/ssl/ssl_scert_single_dilithium.c \
 	src/ssl/ssl_scert_single_ec.c \
 	src/ssl/ssl_scert_single_rsa.c \
 	src/ssl/ssl_server.c \
+	src/ssl/ssl_server_full_dilithium.c \
 	src/ssl/ssl_server_full_ec.c \
 	src/ssl/ssl_server_full_rsa.c \
 	src/ssl/ssl_server_mine2c.c \
@@ -404,6 +407,7 @@ headerspub=" \
 	inc/bearssl.h \
 	inc/bearssl_aead.h \
 	inc/bearssl_block.h \
+	inc/bearssl_dilithium.h \
 	inc/bearssl_ec.h \
 	inc/bearssl_hash.h \
 	inc/bearssl_hmac.h \

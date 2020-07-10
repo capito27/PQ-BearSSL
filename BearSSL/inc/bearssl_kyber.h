@@ -67,9 +67,9 @@ extern "C" {
 #define KYBER_RNG_OUTPUT_FORCE 0x66
 
 // These define will print the contents of the relevant data
-//#define KYBER_PRINT_KEYGEN
-//#define KYBER_PRINT_ENC
-//#define KYBER_PRINT_DEC
+#define KYBER_PRINT_KEYGEN
+#define KYBER_PRINT_ENC
+#define KYBER_PRINT_DEC
 
 
 /**
@@ -154,8 +154,8 @@ typedef struct {
  * \param pk           Kyber public key.
  * \param ct           destination buffer.
  * \param ct_max_len   destination buffer length (maximum encrypted data size).
- * \param ss           message to encrypt.
- * \param ss_len       source message length (in bytes).
+ * \param ss           message that was encrypted.
+ * \param ss_len       message length (in bytes).
  * \return  ciphertext length (in bytes), or 0 on error.
  */
 typedef uint32_t (*br_kyber_encrypt)(
@@ -192,7 +192,7 @@ typedef uint32_t (*br_kyber_encrypt)(
  * \param ss_len   shared secret buffer (in bytes).
  * \param ct       cipher text buffer buffer.
  * \param ct_len   cipher text length (in bytes).
- * \return  0 on success, 1 on error.
+ * \return  1 on success, 0 on error.
  */
 typedef uint32_t (*br_kyber_decrypt)(
         const br_kyber_private_key *sk,
@@ -208,8 +208,8 @@ typedef uint32_t (*br_kyber_decrypt)(
  * \param pk           Kyber public key.
  * \param ct           destination buffer.
  * \param ct_max_len   destination buffer length (maximum encrypted data size).
- * \param ss           message to encrypt.
- * \param ss_len       source message length (in bytes).
+ * \param ss           message that was encrypted.
+ * \param ss_len       message length (in bytes).
  * \return  encrypted message length (in bytes), or 0 on error.
  */
 uint32_t br_kyber_third_party_encrypt(
@@ -255,6 +255,12 @@ br_kyber_encrypt br_kyber_encrypt_get_default(void);
  */
 br_kyber_decrypt br_kyber_decrypt_get_default(void);
 
+
+/**
+ * \brief Get maximal supported Kyber polynomial count
+ */
+#define BR_KYBER_MAX_POLY_COUNT 4
+
 /**
  * \brief Get buffer size to hold Kyber public key material.
  *
@@ -280,6 +286,19 @@ br_kyber_decrypt br_kyber_decrypt_get_default(void);
  * \return  the length of the polynomial vector buffer, in bytes.
  */
 #define BR_KYBER_PRIVATE_KEY_SIZE(count)     (384u * (count) * 2u + 32u * 3u)
+
+/**
+ * \brief Get the offset of the public key material in a Kyber private key buffer
+ * of a given polynomial count
+ *
+ * This macro returns the offset (in bytes) of the public key material buffer
+ * inside of a private key buffer. If the provided count is a constant
+ * expression, then the whole macro evaluates to a constant expression.
+ *
+ * \param count   target polynomial count, guaranteed valid from 2 to 4 (included)
+ * \return  the offset of the contained public key in the private key buffer, in bytes.
+ */
+#define BR_KYBER_PUBLIC_KEY_OFFSET_IN_PRIVATE_KEY(count)     (384u * (count))
 
 /**
  * \brief Get Kyber polynomial count based on a public key size.
@@ -387,6 +406,30 @@ uint32_t br_kyber_third_party_keygen(
  * \return  the default implementation.
  */
 br_kyber_keygen br_kyber_keygen_get_default(void);
+
+/**
+ * \brief Helper function to load a kyber private key from an associated buffer
+ * 
+ * This function will NOT copy any material from the key buffer, as such, 
+ * the key buffer MUST remain valid as long as its associated private key structure
+ *
+ * \param kbuf       kyber private key buffer containing the private key material
+ * \param kbuf_len   Kyber private key buffer length
+ * \param sk         Kyber private key structure (destination)
+ */
+void br_kyber_keygen_load_private_key(void *kbuf, size_t kbuf_len, br_kyber_private_key *sk);
+
+/**
+ * \brief Helper function to load a kyber public key from an associated buffer
+ * 
+ * This function will NOT copy any material from the key buffer, as such, 
+ * the key buffer MUST remain valid as long as its associated public key structure
+ *
+ * \param kbuf       kyber public key buffer containing the public key material
+ * \param kbuf_len   Kyber public key buffer length
+ * \param pk         Kyber public key structure (destination)
+ */
+void br_kyber_keygen_load_public_key(void *kbuf, size_t kbuf_len, br_kyber_public_key *pk);
 
 
 #ifdef __cplusplus

@@ -235,6 +235,7 @@ OBJ = \
  $(OBJDIR)$Pssl_engine_default_descbc$O \
  $(OBJDIR)$Pssl_engine_default_ec$O \
  $(OBJDIR)$Pssl_engine_default_ecdsa$O \
+ $(OBJDIR)$Pssl_engine_default_kyber$O \
  $(OBJDIR)$Pssl_engine_default_rsavrfy$O \
  $(OBJDIR)$Pssl_hashes$O \
  $(OBJDIR)$Pssl_hs_client$O \
@@ -246,9 +247,11 @@ OBJ = \
  $(OBJDIR)$Pssl_rec_ccm$O \
  $(OBJDIR)$Pssl_rec_chapol$O \
  $(OBJDIR)$Pssl_rec_gcm$O \
+ $(OBJDIR)$Pssl_scert_single_dilithium$O \
  $(OBJDIR)$Pssl_scert_single_ec$O \
  $(OBJDIR)$Pssl_scert_single_rsa$O \
  $(OBJDIR)$Pssl_server$O \
+ $(OBJDIR)$Pssl_server_full_dilithium$O \
  $(OBJDIR)$Pssl_server_full_ec$O \
  $(OBJDIR)$Pssl_server_full_rsa$O \
  $(OBJDIR)$Pssl_server_mine2c$O \
@@ -342,7 +345,7 @@ OBJTESTSPEED = \
  $(OBJDIR)$Ptest_speed$O
 OBJTESTX509 = \
  $(OBJDIR)$Ptest_x509$O
-HEADERSPUB = inc$Pbearssl.h inc$Pbearssl_aead.h inc$Pbearssl_block.h inc$Pbearssl_ec.h inc$Pbearssl_hash.h inc$Pbearssl_hmac.h inc$Pbearssl_kdf.h inc$Pbearssl_kyber.h inc$Pbearssl_pem.h inc$Pbearssl_prf.h inc$Pbearssl_rand.h inc$Pbearssl_rsa.h inc$Pbearssl_ssl.h inc$Pbearssl_x509.h
+HEADERSPUB = inc$Pbearssl.h inc$Pbearssl_aead.h inc$Pbearssl_block.h inc$Pbearssl_dilithium.h inc$Pbearssl_ec.h inc$Pbearssl_hash.h inc$Pbearssl_hmac.h inc$Pbearssl_kdf.h inc$Pbearssl_kyber.h inc$Pbearssl_pem.h inc$Pbearssl_prf.h inc$Pbearssl_rand.h inc$Pbearssl_rsa.h inc$Pbearssl_ssl.h inc$Pbearssl_x509.h
 HEADERSPRIV = $(HEADERSPUB) src$Pconfig.h src$Pinner.h
 HEADERSTOOLS = $(HEADERSPUB) tools$Pbrssl.h
 T0SRC = T0$PBlobWriter.cs T0$PCPU.cs T0$PCodeElement.cs T0$PCodeElementJump.cs T0$PCodeElementUInt.cs T0$PCodeElementUIntExpr.cs T0$PCodeElementUIntInt.cs T0$PCodeElementUIntUInt.cs T0$PConstData.cs T0$POpcode.cs T0$POpcodeCall.cs T0$POpcodeConst.cs T0$POpcodeGetLocal.cs T0$POpcodeJump.cs T0$POpcodeJumpIf.cs T0$POpcodeJumpIfNot.cs T0$POpcodeJumpUncond.cs T0$POpcodePutLocal.cs T0$POpcodeRet.cs T0$PSType.cs T0$PT0Comp.cs T0$PTPointerBase.cs T0$PTPointerBlob.cs T0$PTPointerExpr.cs T0$PTPointerNull.cs T0$PTPointerXT.cs T0$PTValue.cs T0$PWord.cs T0$PWordBuilder.cs T0$PWordData.cs T0$PWordInterpreted.cs T0$PWordNative.cs
@@ -1100,6 +1103,9 @@ $(OBJDIR)$Pssl_engine_default_ec$O: src$Pssl$Pssl_engine_default_ec.c $(HEADERSP
 $(OBJDIR)$Pssl_engine_default_ecdsa$O: src$Pssl$Pssl_engine_default_ecdsa.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_ecdsa$O src$Pssl$Pssl_engine_default_ecdsa.c
 
+$(OBJDIR)$Pssl_engine_default_kyber$O: src$Pssl$Pssl_engine_default_kyber.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_kyber$O src$Pssl$Pssl_engine_default_kyber.c
+
 $(OBJDIR)$Pssl_engine_default_rsavrfy$O: src$Pssl$Pssl_engine_default_rsavrfy.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_rsavrfy$O src$Pssl$Pssl_engine_default_rsavrfy.c
 
@@ -1133,6 +1139,9 @@ $(OBJDIR)$Pssl_rec_chapol$O: src$Pssl$Pssl_rec_chapol.c $(HEADERSPRIV)
 $(OBJDIR)$Pssl_rec_gcm$O: src$Pssl$Pssl_rec_gcm.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_rec_gcm$O src$Pssl$Pssl_rec_gcm.c
 
+$(OBJDIR)$Pssl_scert_single_dilithium$O: src$Pssl$Pssl_scert_single_dilithium.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_scert_single_dilithium$O src$Pssl$Pssl_scert_single_dilithium.c
+
 $(OBJDIR)$Pssl_scert_single_ec$O: src$Pssl$Pssl_scert_single_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_scert_single_ec$O src$Pssl$Pssl_scert_single_ec.c
 
@@ -1141,6 +1150,9 @@ $(OBJDIR)$Pssl_scert_single_rsa$O: src$Pssl$Pssl_scert_single_rsa.c $(HEADERSPRI
 
 $(OBJDIR)$Pssl_server$O: src$Pssl$Pssl_server.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_server$O src$Pssl$Pssl_server.c
+
+$(OBJDIR)$Pssl_server_full_dilithium$O: src$Pssl$Pssl_server_full_dilithium.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_server_full_dilithium$O src$Pssl$Pssl_server_full_dilithium.c
 
 $(OBJDIR)$Pssl_server_full_ec$O: src$Pssl$Pssl_server_full_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_server_full_ec$O src$Pssl$Pssl_server_full_ec.c

@@ -14,7 +14,7 @@
 #define DILITHIUM_TESTING_VERIFY
 
 // This define sets the RNG to always simulate the return of the following byte
-#define DILITHIUM_RNG_OUTPUT_FORCE 0x66
+#define DILITHIUM_RNG_OUTPUT_FORCE 0x33
 
 // These define will print the contents of the relevant data
 #define DILITHIUM_PRINT_KEYGEN

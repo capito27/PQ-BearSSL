@@ -339,6 +339,32 @@ make_client_sign(br_ssl_client_context *ctx)
 		ctx->eng.pad, sizeof ctx->eng.pad);
 }
 
+/*
+ * Perform client side Kyber ephemeral key generation, 
+ * prior to the Client Hello message, to be able to use 
+ * the custom, 0xDADD extension. 
+ *
+ * Must provide a valid polynomial count (from 2 to 4)
+ *
+ * Returned value is 1 on success, 0 on error.
+ */
+static int
+kyber_client_hello_keygen(br_ssl_client_context *ctx)
+{
+	
+	if (ctx->eng.kyber_poly_count < 2 || 
+		ctx->eng.kyber_poly_count > BR_KYBER_MAX_POLY_COUNT) {
+		return -1;
+	}
+	ctx->eng.kyber_priv_key_len = BR_KYBER_PRIVATE_KEY_SIZE(ctx->eng.kyber_poly_count);
+	ctx->eng.kyber_pub_key_len = BR_KYBER_PUBLIC_KEY_SIZE(ctx->eng.kyber_poly_count);
+	ctx->eng.kyber_pub_key_offset = BR_KYBER_PUBLIC_KEY_OFFSET_IN_PRIVATE_KEY(ctx->eng.kyber_poly_count);
+
+	return ctx->eng.ikyber_kgn(&ctx->eng.rng.vtable, 
+								&ctx->eng.kyber_sk, ctx->eng.kyber_priv_key, 
+								NULL, NULL, ctx->eng.kyber_poly_count); 
+}
+
 }
 
 \ =======================================================================
@@ -346,7 +372,7 @@ make_client_sign(br_ssl_client_context *ctx)
 : addr-ctx:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8191 "offsetof(br_ssl_client_context, " field + ")" + make-CX
+	0 8192 "offsetof(br_ssl_client_context, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr-ctx: min_clienthello_len
@@ -421,16 +447,39 @@ cc: ext-ALPN-length ( -- len ) {
 	T0_PUSH(len);
 }
 
+\ Length of KYBR_KEY_HELLO extension.
+cc: ext-KYBR-KEY-HELLO-length ( -- len ) {
+	size_t len;
+	if (CTX->eng.use_kyber == 0) {
+		T0_PUSH(0);
+		T0_RET();
+	}
+	len = 9 + CTX->eng.kyber_pub_key_len;
+	T0_PUSH(len);
+}
+
+cc: do-client-hello-KYBR-KEY-HELLO-KGN ( -- ) {
+	if (CTX->eng.use_kyber) {
+		if(kyber_client_hello_keygen(CTX)){
+			br_ssl_engine_fail(ENG, BR_ERR_BAD_PARAM);
+			T0_CO();
+		}
+	}
+}
+
 \ Write handshake message: ClientHello
 : write-ClientHello ( -- )
 	{ ; total-ext-length }
+
+	\ Compute ClientHello KYBR extension ephemeral key if required
+	do-client-hello-KYBR-KEY-HELLO-KGN
 
 	\ Compute length for extensions (without the general two-byte header).
 	\ This does not take padding extension into account.
 	ext-reneg-length ext-sni-length + ext-frag-length +
 	ext-signatures-length +
 	ext-supported-curves-length + ext-point-format-length +
-	ext-ALPN-length +
+	ext-ALPN-length + ext-KYBR-KEY-HELLO-length +
 	>total-ext-length
 
 	\ ClientHello type
@@ -552,6 +601,15 @@ cc: ext-ALPN-length ( -- len ) {
 			2drop
 		else
 			drop
+		then
+		ext-KYBR-KEY-HELLO-length if
+			0xDADD write16                                  \ extension type (56029)
+			addr-kyber_priv_key 							\ base Kyber private key address
+			addr-kyber_pub_key_offset get16 +               \ add public key offset to the private key address 
+			ext-KYBR-KEY-HELLO-length 4 - dup write16       \ extension length
+			2 - dup write16                                 \ Kyber Hello Key length
+			addr-kyber_poly_count get8 write8               \ key type: kyber polynomial count
+			3 - write-blob-head16                           \ the key itself
 		then
 		ext-padding-amount 0< ifnot
 			0x0015 write16          \ extension value (21)
@@ -1118,7 +1176,7 @@ cc: do-client-sign ( -- sig_len ) {
 		dup write16
 		addr-pad swap write-blob
 	else
-		dup use-ecdhe? swap prf-id do-ecdh
+		dup use-server-key-exchange? swap prf-id do-ecdh
 		dup 1+ write24
 		dup write8
 		addr-pad swap write-blob

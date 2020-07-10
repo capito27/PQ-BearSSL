@@ -58,12 +58,12 @@ extern "C" {
 //#define DILITHIUM_TESTING_VERIFY
 
 // This define sets the RNG to always simulate the return of the following byte (only when used with the testing macros)
-#define DILITHIUM_RNG_OUTPUT_FORCE 0x66
+#define DILITHIUM_RNG_OUTPUT_FORCE 0x33
 
 // These define will print the contents of the relevant data
 //#define DILITHIUM_PRINT_KEYGEN
-//#define DILITHIUM_PRINT_SIGN
-//#define DILITHIUM_PRINT_VERIFY
+#define DILITHIUM_PRINT_SIGN
+#define DILITHIUM_PRINT_VERIFY
 
 /**
  * \brief Flag that enables faster signing (roughly 25% faster) at the cost of doubling memory usage during
@@ -244,6 +244,12 @@ br_dilithium_sign br_dilithium_sign_get_default(void);
  * \return  the default implementation.
  */
 br_dilithium_verify br_dilithium_verify_get_default(void);
+
+
+/**
+ * \brief Get maximal supported Dilithium security mode
+ */
+#define BR_DILITHIUM_MAX_SECURITY_MODE 4
 
 /**
  * \brief Get buffer size to hold a Dilithium public key.

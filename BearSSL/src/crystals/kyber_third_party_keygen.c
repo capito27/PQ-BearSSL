@@ -110,10 +110,12 @@ uint32_t br_kyber_third_party_keygen(const br_prng_class **rng_ctx,
     buff_to_key(sk->hpk, kbuf_priv, 32);
     buff_to_key(sk->z, kbuf_priv, 32);
     sk->polynbr = count;
-
-    buff_to_key(pk->polyvec, kbuf_pub, 384 * count);
-    buff_to_key(pk->seed, kbuf_pub, 32);
-    pk->polynbr = count;
+    
+    if (pk) {
+        buff_to_key(pk->polyvec, kbuf_pub, 384 * count);
+        buff_to_key(pk->seed, kbuf_pub, 32);
+        pk->polynbr = count;
+    }
 
     // Map local polynomial vectors to the local polynomial array
     priv.vec = temp;
@@ -168,21 +170,23 @@ uint32_t br_kyber_third_party_keygen(const br_prng_class **rng_ctx,
     br_kyber_third_party_polyvec_add(&pub, &pub, &e);
     br_kyber_third_party_polyvec_reduce(&pub);
 
-    // Pack the public key
-    br_kyber_third_party_polyvec_tobytes(pk->polyvec, &pub);
-    memcpy(pk->seed, tmp, pk->seedlen);
-
     // Pack the private key and copy the public key material
     br_kyber_third_party_polyvec_tobytes(sk->privec, &priv);
+    br_kyber_third_party_polyvec_tobytes(sk->pubvec, &pub);
+    memcpy(sk->seed, tmp, sk->seedlen);
+    (*rng_ctx)->generate(rng_ctx, sk->z, sk->zlen);
+
     br_shake_init(&sc, 256);
-    br_shake_inject(&sc, pk->polyvec, pk->polyveclen);
-    br_shake_inject(&sc, pk->seed, pk->seedlen);
+    br_shake_inject(&sc, sk->pubvec, sk->pubveclen);
+    br_shake_inject(&sc, sk->seed, sk->seedlen);
     br_shake_flip(&sc, 1);
     br_shake_produce(&sc, sk->hpk, sk->hpklen);
-    memcpy(sk->seed, pk->seed, pk->seedlen);
-    memcpy(sk->pubvec, pk->polyvec, pk->polyveclen);
-
-    (*rng_ctx)->generate(rng_ctx, sk->z, sk->zlen);
+    
+    // Pack the public key if it's provided
+    if (pk) {
+        memcpy(pk->seed, sk->seed, sk->seedlen);
+        memcpy(pk->polyvec, sk->pubvec, sk->pubveclen);    
+    }
 
 #if defined KYBER_TESTING_KEYGEN || defined KYBER_TESTING_ENC || defined KYBER_TESTING_DEC
     // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
@@ -192,10 +196,10 @@ uint32_t br_kyber_third_party_keygen(const br_prng_class **rng_ctx,
 #ifdef KYBER_PRINT_KEYGEN
     printf("///////////// KEYGEN /////////////\n");
     // Print the full memory contents of the private and public key
-    printf("public key (%ld bytes):\n", pk->polyveclen);
-    print_hex_memory(pk->polyvec, pk->polyveclen);
-    printf("public key seed (%ld bytes):\n", pk->seedlen);
-    print_hex_memory(pk->seed, pk->seedlen);
+    printf("public key (%ld bytes):\n", sk->pubveclen);
+    print_hex_memory(sk->pubvec, sk->pubveclen);
+    printf("public key seed (%ld bytes):\n", sk->seedlen);
+    print_hex_memory(sk->seed, sk->seedlen);
 
     printf("private key (%ld bytes):\n", sk->priveclen);
     print_hex_memory(sk->privec, sk->priveclen);

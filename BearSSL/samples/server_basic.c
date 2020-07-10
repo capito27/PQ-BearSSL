@@ -39,10 +39,11 @@
 #include "bearssl.h"
 
 /*
- * This sample code can use three possible certificate chains:
+ * This sample code can use four possible certificate chains:
  * -- A full-RSA chain (server key is RSA, certificates are signed with RSA)
  * -- A full-EC chain (server key is EC, certificates are signed with ECDSA)
  * -- A mixed chain (server key is EC, certificates are signed with RSA)
+ * -- A full-Dilitihum chain (server key is Dilithium, certificates are signed with Dilithium)
  *
  * The macros below define which chain is selected. This impacts the list
  * of supported cipher suites.
@@ -64,10 +65,11 @@
  *      non-forward secure cipher suite that uses ChaCha20+Poly1305.
  */
 
-#if !(SERVER_RSA || SERVER_EC || SERVER_MIXED)
-#define SERVER_RSA     1
-#define SERVER_EC      0
-#define SERVER_MIXED   0
+#if !(SERVER_RSA || SERVER_EC || SERVER_MIXED || SERVER_DILIHIUM)
+#define SERVER_RSA        0
+#define SERVER_EC         0
+#define SERVER_MIXED      0
+#define SERVER_DILITHIUM  1
 #endif
 
 #if SERVER_RSA
@@ -82,6 +84,10 @@
 #include "chain-ec+rsa.h"
 #include "key-ec.h"
 #define SKEY   EC
+#elif SERVER_DILITHIUM
+#include "chain-dilithium.h"
+#include "key-dilithium.h"
+#define SKEY   DILITHIUM
 #else
 #error Must use one of RSA, EC or MIXED chains.
 #endif
@@ -361,6 +367,9 @@ main(int argc, char *argv[])
 		br_ssl_server_init_full_ec(&sc, CHAIN, CHAIN_LEN,
 			BR_KEYTYPE_EC, &SKEY);
 #endif
+#elif SERVER_DILITHIUM
+		br_ssl_server_init_full_dilithium(&sc, CHAIN, CHAIN_LEN,
+			&SKEY);
 #else /* SERVER_MIXED */
 #if SERVER_PROFILE_MIN_FS
 #if SERVER_CHACHA20

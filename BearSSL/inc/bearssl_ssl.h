@@ -983,6 +983,26 @@ typedef struct {
 	unsigned char ecdhe_point_len;
 
 	/*
+	 * Kyber peer public key and own private key and shared secret used for kyber based contributory KEM based key exchange 
+	 */
+	unsigned char use_kyber;
+	unsigned char kyber_priv_key[3168];
+    uint16_t kyber_priv_key_len;
+	br_kyber_private_key kyber_sk;
+
+	unsigned char kyber_pub_key[1568];
+    uint16_t kyber_pub_key_len;
+	br_kyber_public_key kyber_pk;
+
+	unsigned char kyber_ct[1568];
+    uint16_t kyber_ct_len;
+
+	unsigned char kyber_own_ss[32];
+
+	unsigned char kyber_poly_count;
+	uint16_t kyber_pub_key_offset;
+
+	/*
 	 * Secure renegotiation (RFC 5746): 'reneg' can be:
 	 *   0   first handshake (server support is not known)
 	 *   1   peer does not support secure renegotiation
@@ -1003,8 +1023,8 @@ typedef struct {
 	/*
 	 * Context variables for the handshake processor. The 'pad' must
 	 * be large enough to accommodate an RSA-encrypted pre-master
-	 * secret, or an RSA signature; since we want to support up to
-	 * RSA-4096, this means at least 512 bytes. (Other pad usages
+	 * secret, or an RSA signature, or a Dilithium signature; since we want to support up to
+	 * Dilithium-4, this means at least 3366 bytes. (Other pad usages
 	 * require its length to be at least 256.)
 	 */
 	struct {
@@ -1014,7 +1034,7 @@ typedef struct {
 	} cpu;
 	uint32_t dp_stack[32];
 	uint32_t rp_stack[32];
-	unsigned char pad[512];
+	unsigned char pad[BR_DILITHIUM_SIGNATURE_SIZE(BR_DILITHIUM_MAX_SECURITY_MODE)];
 	unsigned char *hbuf_in, *hbuf_out, *saved_hbuf_out;
 	size_t hlen_in, hlen_out;
 	void (*hsrun)(void *ctx);
@@ -1115,6 +1135,9 @@ typedef struct {
 	const br_ec_impl *iec;
 	br_rsa_pkcs1_vrfy irsavrfy;
 	br_ecdsa_vrfy iecdsa;
+	br_kyber_decrypt ikyber_dec;
+    br_kyber_encrypt ikyber_enc;
+    br_kyber_keygen ikyber_kgn;
 #endif
 } br_ssl_engine_context;
 
@@ -1728,7 +1751,7 @@ br_ssl_engine_get_rsavrfy(br_ssl_engine_context *cc)
 	return cc->irsavrfy;
 }
 
-/*
+/**
  * \brief Set the ECDSA implementation (signature verification).
  *
  * On the client, this is used to verify the server's signature on its
@@ -1772,6 +1795,74 @@ static inline br_ecdsa_vrfy
 br_ssl_engine_get_ecdsa(br_ssl_engine_context *cc)
 {
 	return cc->iecdsa;
+}
+
+/**
+ * \brief Set the Kyber implementation.
+ *
+ * On the client and server, this is used to perform a quantum-resistant
+ * 3-message key exchange
+ *
+ *
+ * \param cc       client context.
+ * \param ikyber_dec   Kyber decryption implmentaion.
+ * \param ikyber_enc   Kyber encryption implmentaion.
+ * \param ikyber_kgn   Kyber key generation implmentaion.
+ */
+static inline void
+br_ssl_engine_set_kyber(br_ssl_engine_context *cc, br_kyber_decrypt ikyber_dec,
+                        br_kyber_encrypt ikyber_enc, br_kyber_keygen ikyber_kgn)
+{
+   cc->ikyber_dec = ikyber_dec;
+   cc->ikyber_enc = ikyber_enc;
+   cc->ikyber_kgn = ikyber_kgn;
+}
+
+/**
+ * \brief Set the "default" Kyber implementation.
+ *
+ * This function sets the Kyber implementation to the fastest implementation
+ * available on the current platform. This call also sets the elliptic curve
+ * implementation itself, there again to the fastest EC implementation available.
+ *
+ * \param cc   SSL engine context.
+ */
+void br_ssl_engine_set_default_kyber(br_ssl_engine_context *cc);
+
+/**
+ * \brief Get the Kyber decryption implementation configured in the provided engine.
+ *
+ * \param cc   SSL engine context.
+ * \return  the kyber decryption implementation.
+ */
+static inline br_kyber_decrypt
+br_ssl_engine_get_kyber_decrypt(br_ssl_engine_context *cc)
+{
+    return cc->ikyber_dec;
+}
+
+/**
+ * \brief Get the Kyber encryption implementation configured in the provided engine.
+ *
+ * \param cc   SSL engine context.
+ * \return  the kyber encryption implementation.
+ */
+static inline br_kyber_encrypt
+br_ssl_engine_get_kyber_encrypt(br_ssl_engine_context *cc)
+{
+    return cc->ikyber_enc;
+}
+
+/**
+ * \brief Get the Kyber key generation implementation configured in the provided engine.
+ *
+ * \param cc   SSL engine context.
+ * \return  the kyber key generation implementation.
+ */
+static inline br_kyber_keygen
+br_ssl_engine_get_kyber_keygen(br_ssl_engine_context *cc)
+{
+    return cc->ikyber_kgn;
 }
 
 /**
@@ -2282,7 +2373,8 @@ typedef struct {
 	 * \brief Authentication type.
 	 *
 	 * This is either `BR_AUTH_RSA` (RSA signature), `BR_AUTH_ECDSA`
-	 * (ECDSA signature), or `BR_AUTH_ECDH` (static ECDH key exchange).
+	 * (ECDSA signature), `BR_AUTH_ECDH` (static ECDH key exchange),
+	 * `BR_AUTH_DILITHIUM` (Dilithium signature)
 	 */
 	int auth_type;
 
@@ -2333,6 +2425,8 @@ typedef struct {
 #define BR_AUTH_RSA     1
 /** \brief Client authentication type: ECDSA signature. */
 #define BR_AUTH_ECDSA   3
+/** \brief Client authentication type: Dilithium signature (NON STANDARD). */
+#define BR_AUTH_DILITHIUM   4
 
 /**
  * \brief Class type for a certificate handler (client side).
@@ -2437,6 +2531,9 @@ struct br_ssl_client_certificate_class_ {
 	 *
 	 *   - If static ECDH is supported, with an ECDSA-signed certificate,
 	 *     then bit 17 is set.
+	 *
+	 *   - If DILITHIUM signatures with hash function x are supported,
+	 *     then bit 24+x is set.
 	 *
 	 * Notes:
 	 *
@@ -2591,6 +2688,29 @@ typedef struct {
 } br_ssl_client_certificate_ec_context;
 
 /**
+ * \brief A single-chain Dilithium client certificate handler.
+ *
+ * This handler uses a single certificate chain, with a Dilithium
+ * signature. The list of trust anchor DN is ignored.
+ *
+ *
+ * Apart from the first field (vtable pointer), its contents are
+ * opaque and shall not be accessed directly.
+ */
+typedef struct {
+    /** \brief Pointer to vtable. */
+    const br_ssl_client_certificate_class *vtable;
+#ifndef BR_DOXYGEN_IGNORE
+    const br_x509_certificate *chain;
+    size_t chain_len;
+    const br_dilithium_private_key *sk;
+    unsigned issuer_key_type;
+    const br_multihash_context *mhash;
+    br_dilithium_sign idilithium;
+#endif
+} br_ssl_client_certificate_dilithium_context;
+
+/**
  * \brief Context structure for a SSL client.
  *
  * The first field (called `eng`) is the SSL engine; all functions that
@@ -2648,6 +2768,7 @@ struct br_ssl_client_context_ {
 		const br_ssl_client_certificate_class *vtable;
 		br_ssl_client_certificate_rsa_context single_rsa;
 		br_ssl_client_certificate_ec_context single_ec;
+		br_ssl_client_certificate_dilithium_context single_dilithium;
 	} client_auth;
 
 	/*
@@ -2669,6 +2790,9 @@ struct br_ssl_client_context_ {
  *
  *   - If ECDSA is supported with hash function of ID `x`, then bit `8+x`
  *     is set.
+ *
+ *   - If DILITHIUM is supported with hash function of ID `x`, then bit
+ *     `24+x` is set.
  *
  *   - Newer algorithms are symbolic 16-bit identifiers that do not
  *     represent signature algorithm and hash function separately. If
@@ -2927,6 +3051,39 @@ void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
 	const br_ec_impl *iec, br_ecdsa_sign iecdsa);
 
 /**
+ * \brief Set the client certificate chain and key (single Dilithium case).
+ *
+ * This function sets a client certificate chain, that the client will
+ * send to the server whenever a client certificate is requested. This
+ * certificate uses a Dilithium public key; the corresponding private key is
+ * invoked for authentication. Trust anchor names sent by the server are
+ * ignored.
+ *
+ * The provided chain and private key are linked in the client context;
+ * they must remain valid as long as they may be used, i.e. normally
+ * for the duration of the connection, since they might be invoked
+ * again upon renegotiations.
+ *
+ * The `cert_issuer_key_type` value is one of `BR_KEYTYPE_RSA`,
+ * `BR_KEYTYPE_EC` or `BR_KEYTYPE_DILITHIUM`; it is the type of the public
+ * key used by the CA that issued (signed) the client certificate.
+ * (Note: when using TLS 1.2, this parameter is ignored; but its value
+ * matters for TLS 1.0 and 1.1.)
+ *
+ * \param cc                     server context.
+ * \param chain                  server certificate chain to send.
+ * \param chain_len              chain length (number of certificates).
+ * \param sk                     server private key (EC).
+ * \param cert_issuer_key_type   issuing CA's key type.
+ * \param iec                    EC core implementation.
+ * \param iecdsa                 ECDSA signature implementation ("asn1" format).
+ */
+void br_ssl_client_set_single_dilithium(br_ssl_client_context *cc,
+                                        const br_x509_certificate *chain, size_t chain_len,
+                                        const br_dilithium_private_key *sk, unsigned cert_issuer_key_type
+                                        , br_dilithium_sign idilithium);
+
+/**
  * \brief Type for a "translated cipher suite", as an array of two
  * 16-bit integers.
  *
@@ -2937,13 +3094,14 @@ void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
  *
  *   - Bits 12 to 15: key exchange + server key type
  *
- *     | val | symbolic constant        | suite type  | details                                          |
- *     | :-- | :----------------------- | :---------- | :----------------------------------------------- |
- *     |  0  | `BR_SSLKEYX_RSA`         | RSA         | RSA key exchange, key is RSA (encryption)        |
- *     |  1  | `BR_SSLKEYX_ECDHE_RSA`   | ECDHE_RSA   | ECDHE key exchange, key is RSA (signature)       |
- *     |  2  | `BR_SSLKEYX_ECDHE_ECDSA` | ECDHE_ECDSA | ECDHE key exchange, key is EC (signature)        |
- *     |  3  | `BR_SSLKEYX_ECDH_RSA`    | ECDH_RSA    | Key is EC (key exchange), cert signed with RSA   |
- *     |  4  | `BR_SSLKEYX_ECDH_ECDSA`  | ECDH_ECDSA  | Key is EC (key exchange), cert signed with ECDSA |
+ *     | val | symbolic constant        | suite type  | details                                                    |
+ *     | :-- | :----------------------- | :---------- | :--------------------------------------------------------- |
+ *     |  0  | `BR_SSLKEYX_RSA`         | RSA         | RSA key exchange, key is RSA (encryption)                  |
+ *     |  1  | `BR_SSLKEYX_ECDHE_RSA`   | ECDHE_RSA   | ECDHE key exchange, key is RSA (signature)                 |
+ *     |  2  | `BR_SSLKEYX_ECDHE_ECDSA` | ECDHE_ECDSA | ECDHE key exchange, key is EC (signature)                  |
+ *     |  3  | `BR_SSLKEYX_ECDH_RSA`    | ECDH_RSA    | Key is EC (key exchange), cert signed with RSA             |
+ *     |  4  | `BR_SSLKEYX_ECDH_ECDSA`  | ECDH_ECDSA  | Key is EC (key exchange), cert signed with ECDSA           |
+ *     |  5  | `BR_SSLKEYX_KYBR_DLTHM`  | KYBR_DLTHM  | Ephemeral Kyber key exchange, key is Dilithium (signature) |
  *
  *   - Bits 8 to 11: symmetric encryption algorithm
  *
@@ -2989,6 +3147,7 @@ typedef uint16_t br_suite_translated[2];
 #define BR_SSLKEYX_ECDHE_ECDSA   2
 #define BR_SSLKEYX_ECDH_RSA      3
 #define BR_SSLKEYX_ECDH_ECDSA    4
+#define BR_SSLKEYX_KYBR_DLTHM    5
 
 #define BR_SSLENC_3DES_CBC       0
 #define BR_SSLENC_AES128_CBC     1
@@ -3028,7 +3187,7 @@ typedef struct {
 	 * This parameter is ignored for `TLS_RSA_*` and `TLS_ECDH_*`
 	 * cipher suites; it is used only for `TLS_ECDHE_*` suites, in
 	 * which the server _signs_ the ephemeral EC Diffie-Hellman
-	 * parameters sent to the client.
+	 * parameters sent to the client, as well as `TLS_KYBR_DLTM`.
 	 *
 	 * This identifier must be one of the following values:
 	 *
@@ -3106,8 +3265,8 @@ struct br_ssl_server_policy_class_ {
 	 * This callback function shall fill the provided `choices`
 	 * structure with the policy choices for this connection. This
 	 * entails selecting the cipher suite, hash function for signing
-	 * the ServerKeyExchange (applicable only to ECDHE cipher suites),
-	 * and certificate chain to send.
+	 * the ServerKeyExchange (applicable only to ECDHE and DILITHIUM
+	 * cipher suites), and certificate chain to send.
 	 *
 	 * The callback receives a pointer to the server context that
 	 * contains the relevant data. In particular, the functions
@@ -3286,6 +3445,28 @@ typedef struct {
 } br_ssl_server_policy_ec_context;
 
 /**
+ * \brief A single-chain Dilithium policy handler.
+ *
+ * This policy context uses a single certificate chain, and a Dilithium
+ * private key.
+ *
+ * Apart from the first field (vtable pointer), its contents are
+ * opaque and shall not be accessed directly.
+ */
+typedef struct {
+	/** \brief Pointer to vtable. */
+	const br_ssl_server_policy_class *vtable;
+#ifndef BR_DOXYGEN_IGNORE
+	const br_x509_certificate *chain;
+	size_t chain_len;
+	const br_dilithium_private_key *sk;
+	const br_multihash_context *mhash;
+	br_dilithium_sign idilithium;
+	br_prng_class **rnd;
+#endif
+} br_ssl_server_policy_dilithium_context;
+
+/**
  * \brief Class type for a session parameter cache.
  *
  * Session parameters are saved in the cache with `save()`, and
@@ -3452,6 +3633,7 @@ struct br_ssl_server_context_ {
 		const br_ssl_server_policy_class *vtable;
 		br_ssl_server_policy_rsa_context single_rsa;
 		br_ssl_server_policy_ec_context single_ec;
+		br_ssl_server_policy_dilithium_context single_dilithium;
 	} chain_handler;
 
 	/*
@@ -3551,6 +3733,24 @@ void br_ssl_server_init_full_rsa(br_ssl_server_context *cc,
 void br_ssl_server_init_full_ec(br_ssl_server_context *cc,
 	const br_x509_certificate *chain, size_t chain_len,
 	unsigned cert_issuer_key_type, const br_ec_private_key *sk);
+
+/**
+ *  TODO FIX TEXT
+ * \brief SSL server profile: full_dilithium.
+ *
+ * This function initialises the provided SSL server context with
+ * all supported algorithms and cipher suites that rely on a Dilithium
+ * key pair.
+ *
+ *
+ * \param cc                     server context to initialise.
+ * \param chain                  server certificate chain.
+ * \param chain_len              chain length (number of certificates).
+ * \param sk                     Dilithium private key.
+ */
+void br_ssl_server_init_full_dilithium(br_ssl_server_context *cc,
+	const br_x509_certificate *chain, size_t chain_len,
+	const br_dilithium_private_key *sk);
 
 /**
  * \brief SSL server profile: minr2g.
@@ -3834,6 +4034,29 @@ void br_ssl_server_set_single_ec(br_ssl_server_context *cc,
 	const br_ec_private_key *sk, unsigned allowed_usages,
 	unsigned cert_issuer_key_type,
 	const br_ec_impl *iec, br_ecdsa_sign iecdsa);
+	
+/**
+ * \brief Set the server certificate chain and key (single Dilithium case).
+ *
+ * This function uses a policy context included in the server context.
+ * It configures use of a single server certificate chain with a Dilithium
+ * private key.
+ * 
+ * Note that the random number generator MUST be initialised before calling 
+ * the dilithium do sign method. 
+ *
+ *
+ * \param cc                     server context.
+ * \param chain                  server certificate chain to send.
+ * \param chain_len              chain length (number of certificates).
+ * \param sk                     server private key (Dilithium).
+ * \param idilithium             Dilithium signature implementation.
+ * \param rnd             		 Random number generator.
+ */
+void br_ssl_server_set_single_dilithium(br_ssl_server_context *cc,
+	const br_x509_certificate *chain, size_t chain_len,
+	const br_dilithium_private_key *sk, br_dilithium_sign idilithium,
+	const br_prng_class **rnd);
 
 /**
  * \brief Activate client certificate authentication.
@@ -4261,6 +4484,10 @@ int br_sslio_close(br_sslio_context *cc);
 
 /* From RFC 7507 */
 #define BR_TLS_FALLBACK_SCSV                         0x5600
+
+/* Custom quantum-resistant suites  (Unassigned IANA mapping) */
+
+#define BR_TLS_KYBR_DLTHM_WITH_CHACHA20_POLY1305_SHA256   0xDEC0
 
 /*
  * Symbolic constants for alerts.

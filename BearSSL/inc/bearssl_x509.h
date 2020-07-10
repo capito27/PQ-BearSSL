@@ -284,6 +284,8 @@ typedef struct {
 #define BR_KEYTYPE_RSA    1
 /** \brief Key type: algorithm is EC. */
 #define BR_KEYTYPE_EC     2
+/** \brief Key type: algorithm is Dilithium. */
+#define BR_KEYTYPE_DLTHM  3
 
 /**
  * \brief Key type: usage is "key exchange".

@@ -41,7 +41,7 @@ uint32_t br_kyber_third_party_decrypt(const br_kyber_private_key *sk,
     br_kyber_public_key pk;
 
     if (ss_len != 32 || ct_len < BR_KYBER_CIPHERTEXT_SIZE(sk->polynbr)) {
-        return 1;
+        return 0;
     }
 
     priv.vec = temp;
@@ -115,5 +115,5 @@ uint32_t br_kyber_third_party_decrypt(const br_kyber_private_key *sk,
 #ifdef KYBER_TESTING_DEC
     exit(-1);
 #endif
-    return 0;
+    return 1;
 }

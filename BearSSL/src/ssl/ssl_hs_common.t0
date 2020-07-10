@@ -145,7 +145,7 @@ cc: set32 ( val addr -- ) {
 : addr-eng:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8191 "offsetof(br_ssl_engine_context, " field + ")" + make-CX
+	0 8192 "offsetof(br_ssl_engine_context, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr-eng: max_frag_len
@@ -176,12 +176,24 @@ addr-eng: alert
 addr-eng: close_received
 addr-eng: protocol_names_num
 addr-eng: selected_protocol
+addr-eng: use_kyber
+addr-eng: kyber_priv_key
+addr-eng: kyber_priv_key_len
+addr-eng: kyber_sk
+addr-eng: kyber_pub_key
+addr-eng: kyber_pub_key_len
+addr-eng: kyber_pk
+addr-eng: kyber_ct
+addr-eng: kyber_ct_len
+addr-eng: kyber_ss
+addr-eng: kyber_poly_count
+addr-eng: kyber_pub_key_offset
 
 \ Similar to 'addr-eng:', for fields in the 'session' substructure.
 : addr-session-field:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8191 "offsetof(br_ssl_engine_context, session) + offsetof(br_ssl_session_parameters, " field + ")" + make-CX
+	0 8192 "offsetof(br_ssl_engine_context, session) + offsetof(br_ssl_session_parameters, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr-session-field: session_id
@@ -756,6 +768,7 @@ cc: mkrand ( addr len -- ) {
 \       2  ECDHE-ECDSA   (ECDHE key exchange, ECDSA signature)
 \       3  ECDH-RSA      (ECDH key exchange, certificate is RSA-signed)
 \       4  ECDH-ECDSA    (ECDH key exchange, certificate is ECDSA-signed)
+\       5  KYBR_DLTHM    (Kyber key exchange, Dilithium signature)
 \ -- Encryption algorithm:
 \       0  3DES/CBC
 \       1  AES-128/CBC
@@ -833,6 +846,8 @@ hexb| C0AF 2904 | \ TLS_ECDHE_ECDSA_WITH_AES_256_CCM_8
 hexb| CCA8 1504 | \ TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
 hexb| CCA9 2504 | \ TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
 
+hexb| DEC0 5504 | \  BR_TLS_KYBR_DLTHM_WITH_CHACHA20_POLY1305_SHA256 (Unassigned IANA mapping)
+
 hexb| 0000 | \ List terminator.
 
 \ Convert cipher suite identifier to element words. This returns 0 if
@@ -887,6 +902,15 @@ hexb| 0000 | \ List terminator.
 \ Test whether the cipher suite uses ECDH (static) key exchange.
 : use-ecdh? ( suite -- bool )
 	cipher-suite-to-elements 12 >> 2 > ;
+
+\ Test whether the cipher suite uses Kyber key exchange, signed with Dilithium.
+: use-kyber-dlthm? ( suite -- bool )
+	cipher-suite-to-elements 12 >> 5 = ;
+
+\ Test whether the cipher suite uses the server key exchange extension 
+\ (if ECDHE or Kyber key exchanges)
+: use-server-key-exchange? ( suite -- bool )
+	cipher-suite-to-elements 12 >> dup dup 1 = swap 2 = or swap 5 = or ;
 
 \ Get identifier for the PRF (TLS 1.2).
 : prf-id ( suite -- id )
