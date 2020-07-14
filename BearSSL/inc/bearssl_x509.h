@@ -226,7 +226,7 @@ extern "C" {
  * \brief Aggregate structure for public keys.
  */
 typedef struct {
-	/** \brief Key type: `BR_KEYTYPE_RSA` or `BR_KEYTYPE_EC` */
+	/** \brief Key type: `BR_KEYTYPE_RSA`, `BR_KEYTYPE_EC` or `BR_KEYTYPE_DILITHIUM` */
 	unsigned char key_type;
 	/** \brief Actual public key. */
 	union {
@@ -234,6 +234,8 @@ typedef struct {
 		br_rsa_public_key rsa;
 		/** \brief EC public key. */
 		br_ec_public_key ec;
+		/** \brief Dilithium public key. */
+		br_dilithium_public_key dilithium;
 	} key;
 } br_x509_pkey;
 
@@ -302,9 +304,10 @@ typedef struct {
  * \brief Key type: usage is "signature".
  *
  * This value is combined (with bitwise OR) with the algorithm
- * (`BR_KEYTYPE_RSA` or `BR_KEYTYPE_EC`) when informing the X.509
- * validation engine that it should find a public key of that type,
- * fit for signatures (e.g. `TLS_ECDHE_*` cipher suites).
+ * (`BR_KEYTYPE_RSA`, `BR_KEYTYPE_EC` or `BR_KEYTYPE_DILITHIUM`)
+ * when informing the X.509 validation engine that it should find
+ * a public key of that type fit for signatures (e.g. `TLS_ECDHE_*`
+ * or `TLS_KYBR_DLTHM` cipher suites).
  */
 #define BR_KEYTYPE_SIGN   0x20
 
@@ -524,6 +527,21 @@ void br_x509_knownkey_init_rsa(br_x509_knownkey_context *ctx,
 void br_x509_knownkey_init_ec(br_x509_knownkey_context *ctx,
 	const br_ec_public_key *pk, unsigned usages);
 
+/**
+ * \brief Initialize a "known key" X.509 engine with a known Dilithium public key.
+ *
+ * The `usages` parameter is ommited, since the only usage for a Dilithium key is,
+ * `BR_KEYTYPE_SIGN`.
+ *
+ * The provided pointers are linked in, not copied, so they must remain
+ * valid while the public key may be in usage.
+ *
+ * \param ctx      context to initialise.
+ * \param pk       known public key.
+ */
+void br_x509_knownkey_init_dilithium(br_x509_knownkey_context *ctx,
+	const br_dilithium_public_key *pk, unsigned usages);
+
 #ifndef BR_DOXYGEN_IGNORE
 /*
  * The minimal X.509 engine has some state buffers which must be large
@@ -533,28 +551,15 @@ void br_x509_knownkey_init_ec(br_x509_knownkey_context *ctx,
  *    certificate;
  * -- the public key extracted from the EE certificate.
  *
- * We store public key elements in their raw unsigned big-endian
- * encoding. We want to support up to RSA-4096 with a short (up to 64
- * bits) public exponent, thus a buffer for a public key must have
- * length at least 520 bytes. Similarly, a RSA-4096 signature has length
- * 512 bytes.
+ * We want to support up to Dilithium4, thus a buffer 
+ * for a public key must have length at least 1760 bytes. 
+ * Similarly, a Dilithium4 signature has length 3366 bytes.
  *
- * Though RSA public exponents can formally be as large as the modulus
- * (mathematically, even larger exponents would work, but PKCS#1 forbids
- * them), exponents that do not fit on 32 bits are extremely rare,
- * notably because some widespread implementations (e.g. Microsoft's
- * CryptoAPI) don't support them. Moreover, large public exponent do not
- * seem to imply any tangible security benefit, and they increase the
- * cost of public key operations. The X.509 "minimal" engine will tolerate
- * public exponents of arbitrary size as long as the modulus and the
- * exponent can fit together in the dedicated buffer.
- *
- * EC public keys are shorter than RSA public keys; even with curve
- * NIST P-521 (the largest curve we care to support), a public key is
- * encoded over 133 bytes only.
+ * Both RSA and EC public keys and signatures are at least an order of 
+ * magnitude smaller, thus they will fit nicely in this large of a buffer
  */
-#define BR_X509_BUFSIZE_KEY   520
-#define BR_X509_BUFSIZE_SIG   512
+#define BR_X509_BUFSIZE_KEY   1760
+#define BR_X509_BUFSIZE_SIG   3366
 #endif
 
 /**
@@ -731,6 +736,7 @@ typedef struct {
 	br_rsa_pkcs1_vrfy irsa;
 	br_ecdsa_vrfy iecdsa;
 	const br_ec_impl *iec;
+	br_dilithium_vrfy idilithium;
 #endif
 
 } br_x509_minimal_context;
@@ -829,11 +835,30 @@ br_x509_minimal_set_ecdsa(br_x509_minimal_context *ctx,
 }
 
 /**
+ * \brief Set a Dilithium signature verification implementation in the X.509
+ * "minimal" engine.
+ *
+ * Once initialised (with `br_x509_minimal_init()`), the context must
+ * be configured with the signature verification implementations that
+ * it is supposed to support. If `irsa` is `0`, then the RSA support
+ * is disabled.
+ *
+ * \param ctx    validation context.
+ * \param irsa   RSA signature verification implementation (or `0`).
+ */
+static inline void
+br_x509_minimal_set_dilithium(br_x509_minimal_context *ctx,
+	br_dilithium_vrfy idilithium)
+{
+	ctx->idilithium = idilithium;
+}
+
+/**
  * \brief Initialise a "minimal" X.509 engine with default algorithms.
  *
  * This function performs the same job as `br_x509_minimal_init()`, but
- * also sets implementations for RSA, ECDSA, and the standard hash
- * functions.
+ * also sets implementations for RSA, ECDSA, Dilithium, and the standard 
+ * hash functions.
  *
  * \param ctx                 context to initialise.
  * \param trust_anchors       trust anchors.
@@ -1067,8 +1092,8 @@ br_x509_decoder_isCA(br_x509_decoder_context *ctx)
  * \brief Get the issuing CA key type (type of algorithm used to sign the
  * decoded certificate).
  *
- * This is `BR_KEYTYPE_RSA` or `BR_KEYTYPE_EC`. The value 0 is returned
- * if the signature type was not recognised.
+ * This is `BR_KEYTYPE_RSA`, `BR_KEYTYPE_EC` or `BR_KEYTYPE_DLTHM`. The
+ * value 0 is returned if the signature type was not recognised.
  *
  * \param ctx   X.509 decoder context.
  * \return  the issuing CA key type.
@@ -1107,9 +1132,9 @@ typedef struct {
 /**
  * \brief Private key decoder context.
  *
- * The private key decoder recognises RSA and EC private keys, either in
- * their raw, DER-encoded format, or wrapped in an unencrypted PKCS#8
- * archive (again DER-encoded).
+ * The private key decoder recognises RSA, EC and Dilithium private keys, 
+ * either in their raw, DER-encoded format, or wrapped in an unencrypted
+ *  PKCS#8 archive (again DER-encoded).
  *
  * Structure contents are opaque and shall not be accessed directly.
  */
@@ -1119,6 +1144,7 @@ typedef struct {
 	union {
 		br_rsa_private_key rsa;
 		br_ec_private_key ec;
+		br_dilithium_private_key dilithium;
 	} key;
 
 	/* CPU for the T0 virtual machine. */
@@ -1143,8 +1169,11 @@ typedef struct {
 
 	/* Buffer for the private key elements. It shall be large enough
 	   to accommodate all elements for a RSA-4096 private key (roughly
-	   five 2048-bit integers, possibly a bit more). */
-	unsigned char key_data[3 * BR_X509_BUFSIZE_SIG];
+	   five 2048-bit integers, possibly a bit more).
+	   It shall also be large enough to accomodate all elements for 
+	   a Dilithium4 private key, which is much  larger than the
+	   RSA-4096 requirements. */
+	unsigned char key_data[BR_DILITHIUM_SECRET_BUFF_SIZE(BR_DILITHIUM_MAX_SECURITY_MODE)];
 #endif
 } br_skey_decoder_context;
 
@@ -1193,8 +1222,8 @@ br_skey_decoder_last_error(const br_skey_decoder_context *ctx)
 /**
  * \brief Get the decoded private key type.
  *
- * Private key type is `BR_KEYTYPE_RSA` or `BR_KEYTYPE_EC`. If decoding is
- * not finished or failed, then 0 is returned.
+ * Private key type is `BR_KEYTYPE_RSA`, `BR_KEYTYPE_EC` or `BR_KEYTYPE_DLTHM`.
+ * If decoding is not finished or failed, then 0 is returned.
  *
  * \param ctx   key decoder context.
  * \return  decoded private key type, or 0.
@@ -1246,6 +1275,27 @@ br_skey_decoder_get_ec(const br_skey_decoder_context *ctx)
 {
 	if (ctx->err == 0 && ctx->key_type == BR_KEYTYPE_EC) {
 		return &ctx->key.ec;
+	} else {
+		return NULL;
+	}
+}
+
+/**
+ * \brief Get the decoded Dilithium private key.
+ *
+ * This function returns `NULL` if the decoding failed, or is not
+ * finished, or the key is not Dilithium. The returned pointer 
+ * references structures within the context that can become invalid 
+ * if the context is reused or released.
+ *
+ * \param ctx   key decoder context.
+ * \return  decoded RSA private key, or `NULL`.
+ */
+static inline const br_dilithium_private_key *
+br_skey_decoder_get_dilithium(const br_skey_decoder_context *ctx)
+{
+	if (ctx->err == 0 && ctx->key_type == BR_KEYTYPE_DLTHM) {
+		return &ctx->key.dilithium;
 	} else {
 		return NULL;
 	}
@@ -1378,19 +1428,76 @@ size_t br_encode_ec_pkcs8_der(void *dest,
 	const br_ec_private_key *sk, const br_ec_public_key *pk);
 
 /**
+ * \brief Encode a Dilithium private key (raw DER format).
+ *
+ * This function encodes the provided key into a format analogous
+ * to the "raw" format specified in RFC 5915 (type `ECPrivateKey`),
+ * with DER encoding rules.
+ *
+ * The private key is provided in `sk`, the public key being `pk`. If
+ * `pk` is `NULL`, then the encoded key will not include the public key
+ * in its `publicKey` field (which is nominally optional).
+ *
+ * If `dest` is not `NULL`, then the encoded key is written at that
+ * address, and the encoded length (in bytes) is returned. If `dest` is
+ * `NULL`, then nothing is written, but the encoded length is still
+ * computed and returned.
+ *
+ *
+ * \param dest   the destination buffer (or `NULL`).
+ * \param sk     the Dilithium private key.
+ * \param pk     the Dilithium public key.
+ * \return  the encoded key length (in bytes).
+ */
+size_t br_encode_dilithium_raw_der(void *dest, const br_dilithium_private_key *sk,
+	const br_dilithium_public_key *pk);
+
+/**
+ * \brief Encode an RSA private key (PKCS#8 DER format).
+ *
+ * This function encodes the provided key into the PKCS#8 format
+ * (RFC 5958, type `OneAsymmetricKey`).
+ * The private key value (contents of the `privateKey` field)
+ * contains the DER encoding of the `DilithiumPrivateKey` type defined 
+ * in the format analogous to RFC 5915. (See `br_encode_dilithium_raw_der`)
+ *
+ * The private key is provided in `sk`, the public key being `pk`. If
+ * `pk` is not `NULL`, then the encoded public key is included in the
+ * `publicKey` field of the private key value (but not in the `publicKey`
+ * field of the PKCS#8 `OneAsymmetricKey` wrapper).
+ *
+ * If `dest` is not `NULL`, then the encoded key is written at that
+ * address, and the encoded length (in bytes) is returned. If `dest` is
+ * `NULL`, then nothing is written, but the encoded length is still
+ * computed and returned.
+ *
+ * \param dest   the destination buffer (or `NULL`).
+ * \param sk     the Dilithium private key.
+ * \param pk     the Dilithium public key.
+ * \return  the encoded key length (in bytes).
+ */
+size_t br_encode_dilithium_pkcs8_der(void *dest, const br_dilithium_private_key *sk,
+	const br_dilithium_public_key *pk);
+
+/**
  * \brief PEM banner for RSA private key (raw).
  */
-#define BR_ENCODE_PEM_RSA_RAW      "RSA PRIVATE KEY"
+#define BR_ENCODE_PEM_RSA_RAW      		"RSA PRIVATE KEY"
 
 /**
  * \brief PEM banner for EC private key (raw).
  */
-#define BR_ENCODE_PEM_EC_RAW       "EC PRIVATE KEY"
+#define BR_ENCODE_PEM_EC_RAW       		"EC PRIVATE KEY"
+
+/**
+ * \brief PEM banner for Dilithium private key (raw).
+ */
+#define BR_ENCODE_PEM_Dilithium_RAW 	"DILITHIUM PRIVATE KEY"
 
 /**
  * \brief PEM banner for an RSA or EC private key in PKCS#8 format.
  */
-#define BR_ENCODE_PEM_PKCS8        "PRIVATE KEY"
+#define BR_ENCODE_PEM_PKCS8        		"PRIVATE KEY"
 
 #ifdef __cplusplus
 }

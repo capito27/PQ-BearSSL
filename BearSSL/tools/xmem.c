@@ -89,6 +89,13 @@ xpkeydup(const br_x509_pkey *pk)
 		pk2->key.ec.q = xblobdup(pk->key.ec.q, pk->key.ec.qlen);
 		pk2->key.ec.qlen = pk->key.ec.qlen;
 		break;
+	case BR_KEYTYPE_DLTHM:
+		pk2->key.dilithium.mode = pk->key.dilithium.mode;
+		pk2->key.dilithium.rho= xblobdup(pk->key.dilithium.rho, pk->key.dilithium.rholen);
+		pk2->key.dilithium.rholen = pk->key.dilithium.rholen;
+		pk2->key.dilithium.t1= xblobdup(pk->key.dilithium.t1, pk->key.dilithium.t1len);
+		pk2->key.dilithium.t1len = pk->key.dilithium.t1len;
+		break;
 	default:
 		fprintf(stderr, "Unknown public key type: %u\n",
 			(unsigned)pk->key_type);
@@ -109,6 +116,10 @@ xfreepkey(br_x509_pkey *pk)
 			break;
 		case BR_KEYTYPE_EC:
 			xfree(pk->key.ec.q);
+			break;
+		case BR_KEYTYPE_DLTHM:
+			xfree(pk->key.dilithium.rho);
+			xfree(pk->key.dilithium.t1);
 			break;
 		default:
 			fprintf(stderr, "Unknown public key type: %u\n",

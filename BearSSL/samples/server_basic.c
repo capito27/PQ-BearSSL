@@ -42,7 +42,8 @@
  * This sample code can use four possible certificate chains:
  * -- A full-RSA chain (server key is RSA, certificates are signed with RSA)
  * -- A full-EC chain (server key is EC, certificates are signed with ECDSA)
- * -- A mixed chain (server key is EC, certificates are signed with RSA)
+ * -- A mixed RSA-EC chain (server key is EC, certificates are signed with RSA)
+ * -- A mixed EC-Dilithium chain (server key is Dilithium, certificates are signed with EC)
  * -- A full-Dilitihum chain (server key is Dilithium, certificates are signed with Dilithium)
  *
  * The macros below define which chain is selected. This impacts the list
@@ -65,11 +66,12 @@
  *      non-forward secure cipher suite that uses ChaCha20+Poly1305.
  */
 
-#if !(SERVER_RSA || SERVER_EC || SERVER_MIXED || SERVER_DILIHIUM)
-#define SERVER_RSA        0
-#define SERVER_EC         0
-#define SERVER_MIXED      0
-#define SERVER_DILITHIUM  1
+#if !(SERVER_RSA || SERVER_EC || SERVER_MIXED_RSA_EC || SERVER_MIXED_EC_DILITHIUM || SERVER_DILIHIUM)
+#define SERVER_RSA                 0
+#define SERVER_EC                  1
+#define SERVER_MIXED_RSA_EC        0
+#define SERVER_MIXED_EC_DILITHIUM  0
+#define SERVER_DILITHIUM           0
 #endif
 
 #if SERVER_RSA
@@ -80,16 +82,20 @@
 #include "chain-ec.h"
 #include "key-ec.h"
 #define SKEY   EC
-#elif SERVER_MIXED
+#elif SERVER_MIXED_RSA_EC
 #include "chain-ec+rsa.h"
 #include "key-ec.h"
 #define SKEY   EC
+#elif SERVER_MIXED_EC_DILITHIUM
+#include "chain-dilithium+ec.h"
+#include "key-dilithium.h"
+#define SKEY   DLTHM
 #elif SERVER_DILITHIUM
 #include "chain-dilithium.h"
 #include "key-dilithium.h"
-#define SKEY   DILITHIUM
+#define SKEY   DLTHM
 #else
-#error Must use one of RSA, EC or MIXED chains.
+#error Must use one of RSA, EC, DILITHIUM or MIXED chains.
 #endif
 
 /*

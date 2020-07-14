@@ -88,9 +88,9 @@ static void print_hex_memory(void *mem, size_t length) {
 
 #define beta(mode) ((mode) <= 3 ? 425 - 50 * (mode): 175)
 
-uint32_t br_dilithium_third_party_verify(const br_dilithium_public_key *pk,
-                                         const void *sig, size_t sig_len,
-                                         const void *msg, size_t msg_len) {
+uint32_t br_dilithium_third_party_vrfy(const br_dilithium_public_key *pk,
+                                         const void *msg, size_t msg_len,
+                                         const void *sig, size_t sig_len) {
     unsigned int i;
     uint8_t mu[48];
     br_dilithium_third_party_poly c, cp;

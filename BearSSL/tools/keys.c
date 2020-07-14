@@ -124,6 +124,7 @@ read_private_key(const char *fname)
 			name = pos[u].name;
 			if (eqstr(name, "RSA PRIVATE KEY")
 				|| eqstr(name, "EC PRIVATE KEY")
+				|| eqstr(name, "DILITHIUM PRIVATE KEY")
 				|| eqstr(name, "PRIVATE KEY"))
 			{
 				sk = decode_key(pos[u].data, pos[u].data_len);

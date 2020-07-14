@@ -145,7 +145,7 @@ cc: set32 ( val addr -- ) {
 : addr-eng:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8192 "offsetof(br_ssl_engine_context, " field + ")" + make-CX
+	0 16383 "offsetof(br_ssl_engine_context, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr-eng: max_frag_len
@@ -193,7 +193,7 @@ addr-eng: kyber_pub_key_offset
 : addr-session-field:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8192 "offsetof(br_ssl_engine_context, session) + offsetof(br_ssl_session_parameters, " field + ")" + make-CX
+	0 16383 "offsetof(br_ssl_engine_context, session) + offsetof(br_ssl_session_parameters, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr-session-field: session_id
@@ -275,6 +275,11 @@ cc: supports-rsa-sign? ( -- bool ) {
 \ Test support for ECDSA signatures.
 cc: supports-ecdsa? ( -- bool ) {
 	T0_PUSHi(-(ENG->iecdsa != 0));
+}
+
+\ Test support for Dilithium signatures.
+cc: supports-dilithium? ( -- bool ) {
+	T0_PUSHi(-(ENG->idilithium != 0));
 }
 
 \ (Re)initialise the multihasher.
@@ -869,17 +874,19 @@ hexb| 0000 | \ List terminator.
 	cipher-suite-to-elements 0<> ;
 
 \ Get expected key type for cipher suite. The key type is one of
-\ BR_KEYTYPE_RSA or BR_KEYTYPE_EC, combined with either BR_KEYTYPE_KEYX
-\ (RSA encryption or static ECDH) or BR_KEYTYPE_SIGN (RSA or ECDSA
-\ signature, for ECDHE cipher suites).
+\ BR_KEYTYPE_RSA, BR_KEYTYPE_EC or BR_KEYTYPE_DILITHIUM, combined 
+\ with either BR_KEYTYPE_KEYX (RSA encryption or static ECDH) or 
+\ BR_KEYTYPE_SIGN (RSA, ECDSA or Dilithium signature, for ECDHE 
+\ or KYBR_DLTHM cipher suites).
 : expected-key-type ( suite -- key-type )
 	cipher-suite-to-elements 12 >>
 	case
-		0 of CX 0 63 { BR_KEYTYPE_RSA | BR_KEYTYPE_KEYX } endof
-		1 of CX 0 63 { BR_KEYTYPE_RSA | BR_KEYTYPE_SIGN } endof
-		2 of CX 0 63 { BR_KEYTYPE_EC  | BR_KEYTYPE_SIGN } endof
-		3 of CX 0 63 { BR_KEYTYPE_EC  | BR_KEYTYPE_KEYX } endof
-		4 of CX 0 63 { BR_KEYTYPE_EC  | BR_KEYTYPE_KEYX } endof
+		0 of CX 0 63 { BR_KEYTYPE_RSA   | BR_KEYTYPE_KEYX } endof
+		1 of CX 0 63 { BR_KEYTYPE_RSA   | BR_KEYTYPE_SIGN } endof
+		2 of CX 0 63 { BR_KEYTYPE_EC    | BR_KEYTYPE_SIGN } endof
+		3 of CX 0 63 { BR_KEYTYPE_EC    | BR_KEYTYPE_KEYX } endof
+		4 of CX 0 63 { BR_KEYTYPE_EC    | BR_KEYTYPE_KEYX } endof
+		5 of CX 0 63 { BR_KEYTYPE_DLTHM | BR_KEYTYPE_SIGN } endof
 		0 swap
 	endcase ;
 
@@ -901,7 +908,7 @@ hexb| 0000 | \ List terminator.
 
 \ Test whether the cipher suite uses ECDH (static) key exchange.
 : use-ecdh? ( suite -- bool )
-	cipher-suite-to-elements 12 >> 2 > ;
+	cipher-suite-to-elements 12 >> dup 2 > swap 5 < and  ;
 
 \ Test whether the cipher suite uses Kyber key exchange, signed with Dilithium.
 : use-kyber-dlthm? ( suite -- bool )
@@ -911,6 +918,25 @@ hexb| 0000 | \ List terminator.
 \ (if ECDHE or Kyber key exchanges)
 : use-server-key-exchange? ( suite -- bool )
 	cipher-suite-to-elements 12 >> dup dup 1 = swap 2 = or swap 5 = or ;
+
+\ TODO Fix cascading If else with choice later
+\ Returns the Signature algorithm for a key exchange based on the cipher suite
+: get-key-exchange-signature-type ( suite -- i )
+	cipher-suite-to-elements 12 >> { sig-alg }
+	sig-alg 1 = if \ ECDHE signed with RSA, we send 1
+		1
+	else
+		sig-alg 2 = if \ ECDHE signed with ECDSA, we send 3
+			3
+		else
+			sig-alg 5 = if \ Kyber signed with Dilithium, we send 4
+				4
+			else \ Unknown signature algorithm
+				ERR_INVALID_ALGORITHM fail
+			then
+		then
+	then
+	;
 
 \ Get identifier for the PRF (TLS 1.2).
 : prf-id ( suite -- id )
@@ -1371,7 +1397,6 @@ cc: get-key-type-usages ( -- key-type-usages ) {
 	\ Chain processing is finished; get the error code.
 	x509-end-chain
 	dup if neg ret then drop
-
 	\ Return key type and usages.
 	get-key-type-usages ;
 

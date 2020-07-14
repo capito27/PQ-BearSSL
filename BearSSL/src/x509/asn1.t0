@@ -109,7 +109,7 @@ preamble {
 : addr:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8191 "offsetof(CONTEXT_NAME, " field + ")" + make-CX
+	0 16383 "offsetof(CONTEXT_NAME, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr: pad
@@ -150,6 +150,7 @@ err: ERR_X509_WEAK_PUBLIC_KEY
 
 : KEYTYPE_RSA     CX 0 15 { BR_KEYTYPE_RSA } ;
 : KEYTYPE_EC      CX 0 15 { BR_KEYTYPE_EC } ;
+: KEYTYPE_DLTHM      CX 0 15 { BR_KEYTYPE_DLTHM } ;
 
 cc: fail ( err -- ! ) {
 	CTX->err = T0_POPi();
@@ -372,6 +373,21 @@ OID: ecdsa-with-SHA224           1.2.840.10045.4.3.1
 OID: ecdsa-with-SHA256           1.2.840.10045.4.3.2
 OID: ecdsa-with-SHA384           1.2.840.10045.4.3.3
 OID: ecdsa-with-SHA512           1.2.840.10045.4.3.4
+
+\ Custom, non standard OID, for Dilithium signatures with sha.
+\ This will insert itself into the 1.2.840.10045.4 OID structure  
+\ for ECDSA from ANSI X9.62 standard (1998).
+\ If a better solution is available, I'd love to know about it.
+\ Also, let's not support SHA1, in an attempt to not shoot 
+\ oneself in the foot
+
+OID: dilithium-with-SHA224       1.2.840.10045.4.4.1
+OID: dilithium-with-SHA256       1.2.840.10045.4.4.2
+OID: dilithium-with-SHA384       1.2.840.10045.4.4.3
+OID: dilithium-with-SHA512       1.2.840.10045.4.4.4
+
+\ Similarly to above, custom OID to detect Dilithium key types 
+OID: id-dilithiumPublicKey       1.2.840.10045.2.2
 
 OID: id-at-commonName            2.5.4.3
 

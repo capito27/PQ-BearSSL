@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 Thomas Pornin <pornin@bolet.org>
+ * Copyright (c) 2017 Thomas Pornin <pornin@bolet.org>
  *
  * Permission is hereby granted, free of charge, to any person obtaining 
  * a copy of this software and associated documentation files (the
@@ -24,38 +24,9 @@
 
 #include "inner.h"
 
-/* see bearssl_x509.h */
+/* see bearssl_ssl.h */
 void
-br_x509_minimal_init_full(br_x509_minimal_context *xc,
-	const br_x509_trust_anchor *trust_anchors, size_t trust_anchors_num)
+br_ssl_engine_set_default_dilithium(br_ssl_engine_context *cc)
 {
-	/*
-	 * All hash functions are activated.
-	 * Note: the X.509 validation engine will nonetheless refuse to
-	 * validate signatures that use MD5 as hash function.
-	 */
-	static const br_hash_class *hashes[] = {
-		&br_md5_vtable,
-		&br_sha1_vtable,
-		&br_sha224_vtable,
-		&br_sha256_vtable,
-		&br_sha384_vtable,
-		&br_sha512_vtable
-	};
-
-	int id;
-
-	br_x509_minimal_init(xc, &br_sha256_vtable,
-		trust_anchors, trust_anchors_num);
-	br_x509_minimal_set_rsa(xc, &br_rsa_i31_pkcs1_vrfy);
-	br_x509_minimal_set_ecdsa(xc,
-		&br_ec_prime_i31, &br_ecdsa_i31_vrfy_asn1);
-	br_x509_minimal_set_dilithium(xc, 
-		br_dilithium_vrfy_get_default());
-	for (id = br_md5_ID; id <= br_sha512_ID; id ++) {
-		const br_hash_class *hc;
-
-		hc = hashes[id - 1];
-		br_x509_minimal_set_hash(xc, id, hc);
-	}
+	br_ssl_engine_set_dilithium(cc, br_dilithium_vrfy_get_default());
 }

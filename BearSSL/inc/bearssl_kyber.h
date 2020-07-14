@@ -64,12 +64,12 @@ extern "C" {
 //#define KYBER_TESTING_DEC
 
 // This define sets the RNG to always simulate the return of the following byte (only when used with the testing macros)
-#define KYBER_RNG_OUTPUT_FORCE 0x66
+#define KYBER_RNG_OUTPUT_FORCE 0x33
 
 // These define will print the contents of the relevant data
-#define KYBER_PRINT_KEYGEN
-#define KYBER_PRINT_ENC
-#define KYBER_PRINT_DEC
+//#define KYBER_PRINT_KEYGEN
+//#define KYBER_PRINT_ENC
+//#define KYBER_PRINT_DEC
 
 
 /**

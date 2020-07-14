@@ -139,12 +139,15 @@ br_ssl_client_init_full(br_ssl_client_context *cc,
 	br_ssl_client_set_default_rsapub(cc);
 	br_ssl_engine_set_default_rsavrfy(&cc->eng);
 	br_ssl_engine_set_default_ecdsa(&cc->eng);
+	br_ssl_engine_set_default_dilithium(&cc->eng);
+	br_ssl_engine_set_default_kyber(&cc->eng);
+
 	br_x509_minimal_set_rsa(xc, br_ssl_engine_get_rsavrfy(&cc->eng));
 	br_x509_minimal_set_ecdsa(xc,
 		br_ssl_engine_get_ec(&cc->eng),
 		br_ssl_engine_get_ecdsa(&cc->eng));
+	br_x509_minimal_set_dilithium(xc, br_dilithium_vrfy_get_default());
 		
-	br_ssl_engine_set_default_kyber(&cc->eng);
 	cc->eng.use_kyber = 1;
 	cc->eng.kyber_poly_count = 4;
 

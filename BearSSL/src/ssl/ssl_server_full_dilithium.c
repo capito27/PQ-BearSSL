@@ -31,7 +31,7 @@ br_ssl_server_init_full_dilithium(br_ssl_server_context *cc,
 	const br_dilithium_private_key *sk)
 {
 	/*
-	 * The "full" profile supports all implemented Dilithium based cipher suites.
+	 * The "full" profile supports exclusively all implemented Dilithium based cipher suites.
 	 *
 	 */
 	static const uint16_t suites[] = {

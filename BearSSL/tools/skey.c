@@ -321,6 +321,103 @@ print_ec(const br_ec_private_key *sk, outspec *os)
 }
 
 static int
+print_dilithium(const br_dilithium_private_key *sk,	outspec *os)
+{
+	unsigned char *buf;
+	size_t len;
+	int r;
+	unsigned char kbuf_pub[BR_DILITHIUM_SECRET_BUFF_SIZE(BR_DILITHIUM_MAX_SECURITY_MODE)];
+	br_dilithium_public_key pk;
+
+	if (os->print_text) {
+		printf("\nprivate key components :\n");
+		print_int_text("rho", sk->rho, sk->rholen);
+		print_int_text("key", sk->key, sk->keylen);
+		print_int_text("tr", sk->tr, sk->trlen);
+		print_int_text("s1", sk->s1, sk->s1len);
+		print_int_text("s2", sk->s2, sk->s2len);
+		print_int_text("t0", sk->t0, sk->t0len);
+		printf("\npublic key components :\n");
+		print_int_text("rho", pk.rho, pk.rholen);
+		print_int_text("t1", pk.t1, pk.t1len);
+		
+	}
+	if (os->print_C) {
+		print_int_C("DLTHM_RHO", sk->rho, sk->rholen);
+		print_int_C("DLTHM_KEY", sk->key, sk->keylen);
+		print_int_C("DLTHM_TR", sk->tr, sk->trlen);
+		print_int_C("DLTHM_S1", sk->s1, sk->s1len);
+		print_int_C("DLTHM_S2", sk->s2, sk->s2len);
+		print_int_C("DLTHM_T0", sk->t0, sk->t0len);
+		printf("\nstatic const br_dilithium_private_key DLTHM = {\n");
+		printf("\t(unsigned char *)DLTHM_RHO, sizeof DLTHM_RHO,\n");
+		printf("\t(unsigned char *)DLTHM_KEY, sizeof DLTHM_KEY,\n");
+		printf("\t(unsigned char *)DLTHM_TR, sizeof DLTHM_TR,\n");
+		printf("\t(unsigned char *)DLTHM_S1, sizeof DLTHM_S1,\n");
+		printf("\t(unsigned char *)DLTHM_S2, sizeof DLTHM_S2,\n");
+		printf("\t(unsigned char *)DLTHM_T0, sizeof DLTHM_T0,\n");
+		printf("\t%d\n", sk->mode);
+		printf("};\n");
+	}
+
+	if (os->rawder == NULL && os->rawpem == NULL
+		&& os->pk8der == NULL && os->pk8pem == NULL)
+	{
+		return 1;
+	}
+	if (br_dilithium_public_key_derivate_get_default()(sk, &pk, kbuf_pub) != 0) {
+		fprintf(stderr,
+			"ERROR: cannot derivate public key\n");
+		return 0;
+	}
+
+	r = 1;
+	if (os->rawder != NULL || os->rawpem != NULL) {
+		len = br_encode_dilithium_raw_der(NULL, sk, &pk);
+		if (len == 0) {
+			fprintf(stderr, "ERROR: cannot re-encode\n");
+			return 0;
+		}
+		buf = xmalloc(len);
+		if (br_encode_dilithium_raw_der(buf, sk, &pk) != len) {
+			fprintf(stderr, "ERROR: re-encode failure\n");
+			xfree(buf);
+			return 0;
+		}
+		if (os->rawder != NULL) {
+			r &= write_to_file(os->rawder, buf, len);
+		}
+		if (os->rawpem != NULL) {
+			r &= write_to_pem_file(os->rawpem,
+				buf, len, "DILITHIUM PRIVATE KEY");
+		}
+		xfree(buf);
+	}
+	if (os->pk8der != NULL || os->pk8pem != NULL) {
+		len = br_encode_dilithium_pkcs8_der(NULL, sk, &pk);
+		if (len == 0) {
+			fprintf(stderr, "ERROR: cannot re-encode\n");
+			return 0;
+		}
+		buf = xmalloc(len);
+		if (br_encode_dilithium_pkcs8_der(buf, sk, &pk) != len) {
+			fprintf(stderr, "ERROR: re-encode failure\n");
+			xfree(buf);
+			return 0;
+		}
+		if (os->pk8der != NULL) {
+			r &= write_to_file(os->pk8der, buf, len);
+		}
+		if (os->pk8pem != NULL) {
+			r &= write_to_pem_file(os->pk8pem,
+				buf, len, "PRIVATE KEY");
+		}
+		xfree(buf);
+	}
+	return r;
+}
+
+static int
 parse_rsa_spec(const char *kgen_spec, unsigned *size, uint32_t *pubexp)
 {
 	const char *p;
@@ -460,6 +557,90 @@ keygen_ec(int curve, outspec *os)
 }
 
 static int
+parse_dilithium_spec(const char *kgen_spec, int *security_mode)
+{
+	const char *p;
+
+	*security_mode = 0;
+	p = kgen_spec;
+	if (*p != 'd' && *p != 'D') {
+		return 0;
+	}
+	p ++;
+	if (*p != 'i' && *p != 'I') {
+		return 0;
+	}
+	p ++;
+	if (*p != 'l' && *p != 'L') {
+		return 0;
+	}
+	p ++;
+	if (*p != 'i' && *p != 'I') {
+		return 0;
+	}
+	p ++;
+	if (*p != 't' && *p != 'T') {
+		return 0;
+	}
+	p ++;
+	if (*p != 'h' && *p != 'H') {
+		return 0;
+	}
+	p ++;
+	if (*p != 'i' && *p != 'I') {
+		return 0;
+	}
+	p ++;
+	if (*p != 'u' && *p != 'U') {
+		return 0;
+	}
+	p ++;
+	if (*p != 'm' && *p != 'M') {
+		return 0;
+	}
+	p ++;
+	if (*p == 0) {
+		*security_mode = 4;
+		return 1;
+	}
+	if (*p != ':') {
+		return 0;
+	}
+	p ++;
+	if(*p >= '1' || *p <= '4'){
+		*security_mode = *p - '1' + 1;
+	}
+	return *security_mode > 0;
+}
+
+static int
+keygen_dilithium(int dilithium_mode, outspec *os)
+{
+	br_hmac_drbg_context rng;
+	br_prng_seeder seeder;
+	br_dilithium_private_key sk;
+	unsigned char kbuf_priv[BR_DILITHIUM_SECRET_BUFF_SIZE(BR_DILITHIUM_MAX_SECURITY_MODE)];
+	size_t len;
+
+	seeder = br_prng_seeder_system(NULL);
+	if (seeder == 0) {
+		fprintf(stderr, "ERROR: no system source of randomness\n");
+		return 0;
+	}
+	br_hmac_drbg_init(&rng, &br_sha256_vtable, NULL, 0);
+	if (!seeder(&rng.vtable)) {
+		fprintf(stderr, "ERROR: system source of randomness failed\n");
+		return 0;
+	}
+	len = br_dilithium_keygen_get_default()(&rng.vtable, &sk, kbuf_priv, NULL, NULL, dilithium_mode);
+	if (len == -1u) {
+		fprintf(stderr, "ERROR: dilithium key pair generation failed\n");
+		return 0;
+	}
+	return print_dilithium(&sk, os);
+}
+
+static int
 decode_key(const unsigned char *buf, size_t len, outspec *os)
 {
 	br_skey_decoder_context dc;
@@ -484,6 +665,7 @@ decode_key(const unsigned char *buf, size_t len, outspec *os)
 	switch (br_skey_decoder_key_type(&dc)) {
 		const br_rsa_private_key *rk;
 		const br_ec_private_key *ek;
+		const br_dilithium_private_key *dk;
 
 	case BR_KEYTYPE_RSA:
 		rk = br_skey_decoder_get_rsa(&dc);
@@ -496,6 +678,12 @@ decode_key(const unsigned char *buf, size_t len, outspec *os)
 		printf("EC key (curve = %d: %s)\n",
 			ek->curve, ec_curve_name(ek->curve));
 		ret = print_ec(ek, os);
+		break;
+	case BR_KEYTYPE_DLTHM:
+		dk = br_skey_decoder_get_dilithium(&dc);
+		printf("Dilithium key (security mode = %d)\n",
+			dk->mode);
+		ret = print_dilithium(dk, os);
 		break;
 
 	default:
@@ -538,9 +726,11 @@ usage_skey(void)
 	fprintf(stderr,
 "that depend on the key type, separated by colon characters:\n");
 	fprintf(stderr,
-"   rsa[:size[:pubexep]]   RSA key (defaults: size = 2048, pubexp = 3)\n");
+"   rsa[:size[:pubexep]]       RSA key (defaults: size = 2048, pubexp = 3)\n");
 	fprintf(stderr,
-"   ec[:curvename]         EC key (default curve: secp256r1)\n");
+"   ec[:curvename]             EC key (default curve: secp256r1)\n");
+	fprintf(stderr,
+"   dilithium[:security_mode]  EC key (default security mode: 4)\n");
 }
 
 /* see brssl.h */
@@ -673,6 +863,7 @@ do_skey(int argc, char *argv[])
 		unsigned rsa_size;
 		uint32_t rsa_pubexp;
 		int curve;
+		int dilithium_mode;
 
 		if (num_files != 0) {
 			fprintf(stderr,
@@ -687,6 +878,10 @@ do_skey(int argc, char *argv[])
 			}
 		} else if (parse_ec_spec(kgen_spec, &curve)) {
 			if (!keygen_ec(curve, &os)) {
+				goto skey_exit_error;
+			}
+		} else if (parse_dilithium_spec(kgen_spec, &dilithium_mode)) {
+			if (!keygen_dilithium(dilithium_mode, &os)) {
 				goto skey_exit_error;
 			}
 		} else {
@@ -738,6 +933,7 @@ do_skey(int argc, char *argv[])
 				name = pos[u].name;
 				if (eqstr(name, "RSA PRIVATE KEY")
 					|| eqstr(name, "EC PRIVATE KEY")
+					|| eqstr(name, "DILITHIUM PRIVATE KEY")
 					|| eqstr(name, "PRIVATE KEY"))
 				{
 					if (!decode_key(pos[u].data,

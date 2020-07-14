@@ -259,6 +259,7 @@ extern const cipher_suite cipher_suites[];
 #define REQ_ECDHE_RSA      0x0400   /* suite uses ECDHE_RSA key exchange */
 #define REQ_ECDHE_ECDSA    0x0800   /* suite uses ECDHE_ECDSA key exchange */
 #define REQ_ECDH           0x1000   /* suite uses static ECDH key exchange */
+#define REQ_KYBER_DLTHM    0x2000   /* suite uses ephemeral Kyber + dilithium key exchange */
 
 /*
  * Parse a list of cipher suite names. The names are comma-separated. If
@@ -442,10 +443,11 @@ void x509_noanchor_init(x509_noanchor_context *xwc,
  * Aggregate type for a private key.
  */
 typedef struct {
-	int key_type;  /* BR_KEYTYPE_RSA or BR_KEYTYPE_EC */
+	int key_type;  /* BR_KEYTYPE_RSA, BR_KEYTYPE_EC or BR_KEYTYPE_DLTHM */
 	union {
 		br_rsa_private_key rsa;
 		br_ec_private_key ec;
+		br_dilithium_private_key dilithium;
 	} key;
 } private_key;
 

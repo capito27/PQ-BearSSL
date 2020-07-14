@@ -23,6 +23,7 @@
  */
 
 #include "inner.h"
+#include "assert.h"
 
 static int
 se_choose(const br_ssl_server_policy_class **pctx,
@@ -65,20 +66,14 @@ static uint32_t
 se_do_keyx(const br_ssl_server_policy_class **pctx,
 	unsigned char *data, size_t *len)
 {
-	br_ssl_server_policy_dilithium_context *pc;
-	uint32_t r;
-	size_t xoff, xlen;
-
-	pc = (br_ssl_server_policy_dilithium_context *)pctx;
-
-	//r = pc->iec->mul(data, *len, pc->sk->x, pc->sk->xlen, pc->sk->curve);
-	//xoff = pc->iec->xoff(pc->sk->curve, &xlen);
-	memmove(data, data + xoff, xlen);
-	*len = xlen;
-	return r;
+	(void)pctx;
+	(void)data;
+	(void)len;
+	// Unimplemented for dilithium certificates
+	assert(0);
+	return 0;
 }
 
-// TODO IMPL
 static size_t
 se_do_sign(const br_ssl_server_policy_class **pctx,
 	unsigned algo_id, unsigned char *data, size_t hv_len, size_t len)
@@ -94,7 +89,6 @@ se_do_sign(const br_ssl_server_policy_class **pctx,
 		return 0;
 	}
 	memcpy(hv, data, hv_len);
-	printf("Signature size : %d\n",BR_DILITHIUM_SIGNATURE_SIZE(pc->sk->mode) );
 	if (len < BR_DILITHIUM_SIGNATURE_SIZE(pc->sk->mode)) {
 		return 0;
 	}

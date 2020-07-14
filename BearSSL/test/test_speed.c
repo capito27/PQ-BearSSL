@@ -1295,7 +1295,7 @@ test_speed_ecdsa_i31(void) {
 
 static void
 test_speed_dilithium_inner(char *name,
-                       br_dilithium_sign sign, br_dilithium_verify verify, br_dilithium_keygen kgen, unsigned mode) {
+                       br_dilithium_sign sign, br_dilithium_vrfy verify, br_dilithium_keygen kgen, unsigned mode) {
     unsigned char sig[BR_DILITHIUM_SIGNATURE_SIZE(mode)];
     char const *msg = "THIS IS A DILITHIUM TEST SIGN MESSAGE";
     unsigned char kbuf_priv[BR_DILITHIUM_SECRET_BUFF_SIZE(mode)];
@@ -1396,7 +1396,7 @@ test_speed_dilithium_inner(char *name,
 
         begin = clock();
         for (k = num; k > 0; k--) {
-            verify(&pk, sig, sizeof(sig), msg, strlen(msg));
+            verify(&pk, msg, strlen(msg), sig, sizeof(sig));
 #ifdef DILITHIUM_TESTING_VERIFY
             break;
 #endif
@@ -1420,7 +1420,7 @@ static void
 test_speed_dilithium_1_third_party(void) {
     test_speed_dilithium_inner("Dilithium1 third party",
                                &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_vrfy,
                                &br_dilithium_third_party_keygen,
                                1);
 }
@@ -1429,7 +1429,7 @@ static void
 test_speed_dilithium_2_third_party(void) {
     test_speed_dilithium_inner("Dilithium2 third party",
                                &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_vrfy,
                                &br_dilithium_third_party_keygen,
                                2);
 }
@@ -1438,7 +1438,7 @@ static void
 test_speed_dilithium_3_third_party(void) {
     test_speed_dilithium_inner("Dilithium3 third party",
                                &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_vrfy,
                                &br_dilithium_third_party_keygen,
                                3);
 }
@@ -1447,7 +1447,7 @@ static void
 test_speed_dilithium_4_third_party(void) {
     test_speed_dilithium_inner("Dilithium4 third party",
                                &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_verify,
+                               &br_dilithium_third_party_vrfy,
                                &br_dilithium_third_party_keygen,
                                4);
 }

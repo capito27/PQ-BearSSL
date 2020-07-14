@@ -46,6 +46,17 @@ br_x509_knownkey_init_ec(br_x509_knownkey_context *ctx,
 	ctx->usages = usages;
 }
 
+/* see bearssl_x509.h */
+void
+br_x509_knownkey_init_dilithium(br_x509_knownkey_context *ctx,
+	const br_dilithium_public_key *pk, unsigned usages)
+{
+	ctx->vtable = &br_x509_knownkey_vtable;
+	ctx->pkey.key_type = BR_KEYTYPE_DLTHM;
+	ctx->pkey.key.dilithium = *pk;
+	ctx->usages = usages;
+}
+
 static void
 kk_start_chain(const br_x509_class **ctx, const char *server_name)
 {

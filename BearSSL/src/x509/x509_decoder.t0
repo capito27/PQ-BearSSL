@@ -103,8 +103,8 @@ cc: read-blob-inner ( addr len -- addr len ) {
 
 \ Get the address and length for the pkey_data buffer.
 : addr-len-pkey_data ( -- addr len )
-	CX 0 8191 { offsetof(br_x509_decoder_context, pkey_data) }
-	CX 0 8191 { BR_X509_BUFSIZE_KEY } ;
+	CX 0 16383 { offsetof(br_x509_decoder_context, pkey_data) }
+	CX 0 16383 { BR_X509_BUFSIZE_KEY } ;
 
 \ Copy the public key (RSA) to the permanent buffer.
 cc: copy-rsa-pkey ( nlen elen -- ) {
@@ -125,6 +125,13 @@ cc: copy-ec-pkey ( curve qlen -- ) {
 	CTX->pkey.key.ec.curve = curve;
 	CTX->pkey.key.ec.q = CTX->pkey_data;
 	CTX->pkey.key.ec.qlen = qlen;
+}
+
+\ Copy the public key (Dilithium) to the permanent buffer.
+cc: copy-dilithium-pkey ( klen -- ) {
+	size_t klen = T0_POP();
+	CTX->pkey.key_type = BR_KEYTYPE_DLTHM;
+	br_dilithium_keygen_load_public_key(CTX->pkey_data, klen, &CTX->pkey.key.dilithium);
 }
 
 \ Extensions with specific processing.
@@ -232,6 +239,21 @@ OID: basicConstraints    2.5.29.19
 			read-blob
 			curve qlen copy-ec-pkey
 		enduf
+
+		\ Dilithium public key.
+		id-dilithiumPublicKey eqOID uf
+			skip-close-elt
+			\ Public key itself: the BIT STRING contains bytes
+			\ (no partial byte) and these bytes encode the
+			\ actual value.
+			read-bits-open
+			dup { klen }
+			dup addr-len-pkey_data rot < if
+				ERR_X509_LIMIT_EXCEEDED fail
+			then
+			read-blob
+			klen copy-dilithium-pkey
+		enduf
 		ERR_X509_UNSUPPORTED fail
 	endchoice
 	close-elt
@@ -294,6 +316,11 @@ OID: basicConstraints    2.5.29.19
 			ecdsa-with-SHA256        eqOID uf 4 KEYTYPE_EC enduf
 			ecdsa-with-SHA384        eqOID uf 5 KEYTYPE_EC enduf
 			ecdsa-with-SHA512        eqOID uf 6 KEYTYPE_EC enduf
+
+			dilithium-with-SHA224    eqOID uf 3 KEYTYPE_DLTHM enduf
+			dilithium-with-SHA256    eqOID uf 4 KEYTYPE_DLTHM enduf
+			dilithium-with-SHA384    eqOID uf 5 KEYTYPE_DLTHM enduf
+			dilithium-with-SHA512    eqOID uf 6 KEYTYPE_DLTHM enduf
 
 			0 0
 		endchoice

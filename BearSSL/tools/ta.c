@@ -105,6 +105,12 @@ print_ta_internals(br_x509_trust_anchor *ta, long ctr)
 		sprintf(tmp, "TA%ld_EC_Q", ctr);
 		print_blob(tmp, ta->pkey.key.ec.q, ta->pkey.key.ec.qlen);
 		break;
+	case BR_KEYTYPE_DLTHM:
+		sprintf(tmp, "TA%ld_DLTHM_RHO", ctr);
+		print_blob(tmp, ta->pkey.key.dilithium.rho, ta->pkey.key.dilithium.rholen);
+		sprintf(tmp, "TA%ld_DLTHM_T1", ctr);
+		print_blob(tmp, ta->pkey.key.dilithium.t1, ta->pkey.key.dilithium.t1len);
+		break;
 	default:
 		fprintf(stderr, "ERROR: unknown anchor key type '%d'\n",
 			ta->pkey.key_type);
@@ -147,7 +153,18 @@ print_ta(br_x509_trust_anchor *ta, long ctr)
 		printf("\t\t\t\t%s,\n", cname);
 		printf("\t\t\t\t(unsigned char *)TA%ld_EC_Q,"
 			" sizeof TA%ld_EC_Q,\n", ctr, ctr);
+		printf("\t\t\t} }\n");	
+		break;
+	case BR_KEYTYPE_DLTHM:
+		printf("\t\t\tBR_KEYTYPE_DLTHM,\n");
+		printf("\t\t\t{ .dilithium = {\n");
+		printf("\t\t\t\t(unsigned char *)TA%ld_DLTHM_RHO,"
+			" sizeof TA%ld_DLTHM_RHO,\n", ctr, ctr);
+		printf("\t\t\t\t(unsigned char *)TA%ld_DLTHM_T1,"
+			" sizeof TA%ld_DLTHM_T1,\n", ctr, ctr);
+		printf("\t\t\t\t%d,\n", ta->pkey.key.dilithium.mode);
 		printf("\t\t\t} }\n");
+		break;
 	}
 	printf("\t\t}\n");
 	printf("\t}");

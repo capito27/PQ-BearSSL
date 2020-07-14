@@ -127,14 +127,14 @@ static const unsigned char *HASH_OID[] = {
  * Check the RSA signature on the ServerKeyExchange message.
  *
  *   hash      hash function ID (2 to 6), or 0 for MD5+SHA-1 (with RSA only)
- *   use_rsa   non-zero for RSA signature, zero for ECDSA
+ *   sig_alg   1 for RSA signature, 3 for ECDSA, 4 for Dilithium
  *   sig_len   signature length (in bytes); signature value is in the pad
  *
  * Returned value is 0 on success, or an error code.
  */
 static int
 verify_SKE_sig(br_ssl_client_context *ctx,
-	int hash, int use_rsa, size_t sig_len)
+	int hash, int sig_alg, size_t sig_len)
 {
 	const br_x509_class **xc;
 	const br_x509_pkey *pk;
@@ -151,13 +151,24 @@ verify_SKE_sig(br_ssl_client_context *ctx,
 		ctx->eng.client_random, sizeof ctx->eng.client_random);
 	br_multihash_update(&mhc,
 		ctx->eng.server_random, sizeof ctx->eng.server_random);
-	head[0] = 3;
-	head[1] = 0;
-	head[2] = ctx->eng.ecdhe_curve;
-	head[3] = ctx->eng.ecdhe_point_len;
-	br_multihash_update(&mhc, head, sizeof head);
-	br_multihash_update(&mhc,
-		ctx->eng.ecdhe_point, ctx->eng.ecdhe_point_len);
+
+	if (sig_alg < 4){ // For ECDSA or RSA signatures
+		head[0] = 3;
+		head[1] = 0;
+		head[2] = ctx->eng.ecdhe_curve;
+		head[3] = ctx->eng.ecdhe_point_len;
+		br_multihash_update(&mhc, head, sizeof head);
+		br_multihash_update(&mhc,
+			ctx->eng.ecdhe_point, ctx->eng.ecdhe_point_len);
+	} else { // For Dilithium signatures
+		head[0] = 3;
+		head[1] = ctx->eng.kyber_ct_len >> 8;
+		head[2] = ctx->eng.kyber_ct_len & 0xFF;
+		br_multihash_update(&mhc, head, sizeof(head) - 1);
+		br_multihash_update(&mhc,
+			ctx->eng.kyber_ct, ctx->eng.kyber_ct_len);
+	}
+
 	if (hash) {
 		hv_len = br_multihash_out(&mhc, hash, hv);
 		if (hv_len == 0) {
@@ -171,7 +182,8 @@ verify_SKE_sig(br_ssl_client_context *ctx,
 		}
 		hv_len = 36;
 	}
-	if (use_rsa) {
+
+	if (sig_alg == 1) { // RSA Signature
 		unsigned char tmp[64];
 		const unsigned char *hash_oid;
 
@@ -186,8 +198,14 @@ verify_SKE_sig(br_ssl_client_context *ctx,
 		{
 			return BR_ERR_BAD_SIGNATURE;
 		}
-	} else {
+	} else if (sig_alg == 3) { // ECDSA Signature
 		if (!ctx->eng.iecdsa(ctx->eng.iec, hv, hv_len, &pk->key.ec,
+			ctx->eng.pad, sig_len))
+		{
+			return BR_ERR_BAD_SIGNATURE;
+		}
+	} else if (sig_alg == 4) { // Dilithium Signature
+		if (!ctx->eng.idilithium(&pk->key.dilithium, hv, hv_len,
 			ctx->eng.pad, sig_len))
 		{
 			return BR_ERR_BAD_SIGNATURE;
@@ -308,6 +326,61 @@ make_pms_static_ecdh(br_ssl_client_context *ctx, int prf_id)
 }
 
 /*
+ * Perform client-side Kyber Contibutive Key Exchange. The ciphertext
+ * that should be sent to the server is written in the pad; returned 
+ * value is either the ciphertext length (in bytes), or -x on error, 
+ * with 'x' being an error code.
+ *
+ */
+static int
+make_pms_kyber(br_ssl_client_context *ctx, int prf_id)
+{
+	unsigned char server_ss[32];
+    br_shake_context sc;
+	size_t glen;
+	
+
+	// Decrypt the ciphertext (an error will be returned on too large a ciphertext)
+	// An invalid but properly sized ciphertext will output a constant, pseudorandom secret
+	if (!ctx->eng.ikyber_dec(&ctx->eng.kyber_sk, server_ss, sizeof server_ss,
+							ctx->eng.kyber_ct, sizeof ctx->eng.kyber_ct)) {
+		return -BR_ERR_LIMIT_EXCEEDED;
+	}
+
+	// Load the server's public key
+	br_kyber_keygen_load_public_key(ctx->eng.kyber_pub_key, ctx->eng.kyber_pub_key_len, &ctx->eng.kyber_pk);
+
+	/*
+	 * Compute our Ciphertext for the client (As well as storing its associated shared secret).
+	 */
+	
+	glen = ctx->eng.ikyber_enc(&ctx->eng.rng.vtable, &ctx->eng.kyber_pk, 
+								ctx->eng.pad, sizeof ctx->eng.pad,
+								ctx->eng.kyber_own_ss, sizeof ctx->eng.kyber_own_ss);
+
+	/*
+	 * Compute the pre-master secret.
+	 * It is obtained by Shake256(client_ss | server_ss)
+	 */
+	br_shake_init(&sc, 256);
+	br_shake_inject(&sc, ctx->eng.kyber_own_ss, sizeof ctx->eng.kyber_own_ss);
+	br_shake_inject(&sc, server_ss, sizeof server_ss);
+	br_shake_flip(&sc, 0);
+	br_shake_produce(&sc, server_ss, sizeof server_ss);
+
+	br_ssl_engine_compute_master(&ctx->eng, prf_id, server_ss, sizeof server_ss);
+
+	/*
+	 * Clear the Kyber private key. Forward Secrecy is achieved insofar
+	 * as that key does not get stolen, so we'd better destroy it
+	 * as soon as it ceases to be useful.
+	 */
+	memset(ctx->eng.kyber_priv_key, 0, ctx->eng.kyber_priv_key_len);
+
+	return (int)glen;
+}
+
+/*
  * Compute the client-side signature. This is invoked only when a
  * signature-based client authentication was selected. The computed
  * signature is in the pad; its length (in bytes) is returned. On
@@ -372,7 +445,7 @@ kyber_client_hello_keygen(br_ssl_client_context *ctx)
 : addr-ctx:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8192 "offsetof(br_ssl_client_context, " field + ")" + make-CX
+	0 16383 "offsetof(br_ssl_client_context, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr-ctx: min_clienthello_len
@@ -888,21 +961,21 @@ cc: set-server-curve ( -- ) {
 	dup 0< if neg fail then
 	dup ifnot ERR_UNEXPECTED fail then
 	over and <> if ERR_WRONG_KEY_USAGE fail then
-
+	
 	\ Set server curve (used for static ECDH).
 	set-server-curve ;
 
-\ Verify signature on ECDHE point sent by the server.
+\ Verify signature on ECDHE point or kyber ciphertext sent by the server.
 \   'hash' is the hash function to use (1 to 6, or 0 for RSA with MD5+SHA-1)
-\   'use-rsa' is 0 for ECDSA, -1 for for RSA
+\   'sig-alg' is 1 for RSA, 3 for ECDSA, 4 for for Dilithium
 \   'sig-len' is the signature length (in bytes)
 \ The signature itself is in the pad.
-cc: verify-SKE-sig ( hash use-rsa sig-len -- err ) {
+cc: verify-SKE-sig ( hash sig-alg sig-len -- err ) {
 	size_t sig_len = T0_POP();
-	int use_rsa = T0_POPi();
+	int sig_alg = T0_POPi();
 	int hash = T0_POPi();
 
-	T0_PUSH(verify_SKE_sig(CTX, hash, use_rsa, sig_len));
+	T0_PUSH(verify_SKE_sig(CTX, hash, sig_alg, sig_len));
 }
 
 \ Parse ServerKeyExchange
@@ -910,17 +983,31 @@ cc: verify-SKE-sig ( hash use-rsa sig-len -- err ) {
 	\ Get header, and check message type.
 	read-handshake-header 12 = ifnot ERR_UNEXPECTED fail then
 
-	\ We expect a named curve, and we must support it.
-	read8 3 = ifnot ERR_INVALID_ALGORITHM fail then
-	read16 dup addr-ecdhe_curve set8
-	dup 32 >= if ERR_INVALID_ALGORITHM fail then
-	supported-curves swap >> 1 and ifnot ERR_INVALID_ALGORITHM fail then
+	\ We expect either a named curve, and we must support it.
+	\ Or a Dilithium key exchange.
+	read8 { exchange-type }
+	choice
+		exchange-type 3 = uf \ Named curve
+			\ Verify named curve present and supported
+			read16 dup addr-ecdhe_curve set8
+			dup 32 >= if ERR_INVALID_ALGORITHM fail then
+			supported-curves swap >> 1 and ifnot ERR_INVALID_ALGORITHM fail then
 
-	\ Read the server point.
-	read8
-	dup 133 > if ERR_INVALID_ALGORITHM fail then
-	dup addr-ecdhe_point_len set8
-	addr-ecdhe_point swap read-blob
+			\ Read the server point.
+			read8
+			dup 133 > if ERR_INVALID_ALGORITHM fail then
+			dup addr-ecdhe_point_len set8
+			addr-ecdhe_point swap read-blob
+		enduf
+
+		exchange-type 4 = uf \ Dilithium key exchange
+			\ Read the server ciphertext
+			read16
+			dup 1568 > if ERR_INVALID_ALGORITHM fail then
+			dup addr-kyber_ct_len set16
+			addr-kyber_ct swap read-blob
+		enduf
+	endchoice
 
 	\ If using TLS-1.2+, then the hash function and signature algorithm
 	\ are explicitly provided; the signature algorithm must match what
@@ -928,7 +1015,7 @@ cc: verify-SKE-sig ( hash use-rsa sig-len -- err ) {
 	\ algorithm is inferred from the cipher suite, and the hash is
 	\ either MD5+SHA-1 (for RSA signatures) or SHA-1 (for ECDSA).
 	addr-version get16 0x0303 >= { tls1.2+ }
-	addr-cipher_suite get16 use-rsa-ecdhe? { use-rsa }
+	addr-cipher_suite get16 get-key-exchange-signature-type { sig-alg }
 	2 { hash }
 	tls1.2+ if
 		\ Read hash function; accept only the SHA-* identifiers
@@ -936,27 +1023,35 @@ cc: verify-SKE-sig ( hash use-rsa sig-len -- err ) {
 		read8
 		dup dup 2 < swap 6 > or if ERR_INVALID_ALGORITHM fail then
 		>hash
-		read8
 		\ Get expected signature algorithm and compare with what
 		\ the server just sent. Expected value is 1 for RSA, 3
-		\ for ECDSA. Note that 'use-rsa' evaluates to -1 for RSA,
-		\ 0 for ECDSA.
-		use-rsa 1 << 3 + = ifnot ERR_INVALID_ALGORITHM fail then
+		\ for ECDSA and 4 for Dilithium.
+		read8
+		sig-alg = ifnot ERR_INVALID_ALGORITHM fail then
 	else
-		\ For MD5+SHA-1, we set 'hash' to 0.
-		use-rsa if 0 >hash then
+		\ For RSA in TLS1.0 or TLS1.1, we set 'hash' to 0.
+		sig-alg 1 =  if 0 >hash then
 	then
 
 	\ Read signature into the pad.
 	read16 dup { sig-len }
 
-	dup 512 > if ERR_LIMIT_EXCEEDED fail then
+	\ If signature too large
+	dup 3366 > if ERR_LIMIT_EXCEEDED fail then
 	addr-pad swap read-blob
 
 	\ Verify signature.
-	hash use-rsa sig-len verify-SKE-sig
+	hash sig-alg sig-len verify-SKE-sig
 	dup if fail then drop
-
+	
+	\ If we're doing a Dilithium key exchange, store the server's ephemeral key
+	exchange-type 4 = if
+			\ Read the server ephemeral key
+			read16
+			dup 1568 > if ERR_LIMIT_EXCEEDED fail then
+			dup addr-kyber_pub_key_len set16
+			addr-kyber_pub_key swap read-blob
+	then
 	close-elt ;
 
 \ Client certificate: start processing of anchor names.
@@ -1028,7 +1123,7 @@ cc: get-client-chain ( auth_types -- ) {
 \ Parse CertificateRequest. Header has already been read.
 : read-contents-CertificateRequest ( lim -- )
 	\ Read supported client authentication types. We keep only
-	\ RSA, ECDSA, and ECDH.
+	\ RSA, ECDSA, ECDH, DLTHM.
 	0 { auth_types }
 	read8 open-elt
 	begin dup while
@@ -1146,6 +1241,19 @@ cc: do-ecdh ( echde prf_id -- ulen ) {
 	}
 }
 
+cc: do-kyber-kex ( prf-id -- ulen ) {
+	int x;
+	unsigned prf_id = T0_POP();
+
+	x = make_pms_kyber(CTX, prf_id);
+	if (x < 0) {
+		br_ssl_engine_fail(ENG, -x);
+		T0_CO();
+	} else {
+		T0_PUSH(x);
+	}
+}
+
 cc: do-static-ecdh ( prf-id -- ) {
 	unsigned prf_id = T0_POP();
 
@@ -1170,16 +1278,23 @@ cc: do-client-sign ( -- sig_len ) {
 : write-ClientKeyExchange ( -- )
 	16 write8
 	addr-cipher_suite get16
-	dup use-rsa-keyx? if
+	dup use-rsa-keyx? if \ RSA key exchange
 		prf-id do-rsa-encrypt
 		dup 2+ write24
 		dup write16
 		addr-pad swap write-blob
-	else
-		dup use-server-key-exchange? swap prf-id do-ecdh
-		dup 1+ write24
-		dup write8
-		addr-pad swap write-blob
+	else \ ECDH or Kyber Key exchange
+		dup use-ecdhe? if \ ECDHE
+			dup use-ecdhe? swap prf-id do-ecdh
+			dup 1+ write24
+			dup write8
+			addr-pad swap write-blob
+		else
+			prf-id do-kyber-kex
+			dup 2+ write24 \ write full message length (ciphertext length + 2)
+			dup write16    \ write ciphertext length 
+			addr-pad swap write-blob \ write the final ciphertext
+		then
 	then ;
 
 \ Write CertificateVerify. This is invoked only if a client certificate

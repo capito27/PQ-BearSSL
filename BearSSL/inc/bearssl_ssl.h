@@ -1025,7 +1025,7 @@ typedef struct {
 	 * be large enough to accommodate an RSA-encrypted pre-master
 	 * secret, or an RSA signature, or a Dilithium signature; since we want to support up to
 	 * Dilithium-4, this means at least 3366 bytes. (Other pad usages
-	 * require its length to be at least 256.)
+	 * require its length to be at least 512.)
 	 */
 	struct {
 		uint32_t *dp;
@@ -1034,7 +1034,7 @@ typedef struct {
 	} cpu;
 	uint32_t dp_stack[32];
 	uint32_t rp_stack[32];
-	unsigned char pad[BR_DILITHIUM_SIGNATURE_SIZE(BR_DILITHIUM_MAX_SECURITY_MODE)];
+	unsigned char pad[3366];
 	unsigned char *hbuf_in, *hbuf_out, *saved_hbuf_out;
 	size_t hlen_in, hlen_out;
 	void (*hsrun)(void *ctx);
@@ -1135,6 +1135,7 @@ typedef struct {
 	const br_ec_impl *iec;
 	br_rsa_pkcs1_vrfy irsavrfy;
 	br_ecdsa_vrfy iecdsa;
+	br_dilithium_vrfy idilithium;
 	br_kyber_decrypt ikyber_dec;
     br_kyber_encrypt ikyber_enc;
     br_kyber_keygen ikyber_kgn;
@@ -1863,6 +1864,48 @@ static inline br_kyber_keygen
 br_ssl_engine_get_kyber_keygen(br_ssl_engine_context *cc)
 {
     return cc->ikyber_kgn;
+}
+
+/**
+ * \brief Set the Dilithium implementation (signature verification).
+ *
+ * On the client, this is used to verify the server's signature on its
+ * ServerKeyExchange message (for KYBR_DLTHM cipher suites). On the server,
+ * this is used to verify the client's CertificateVerify message (if a
+ * client certificate is requested, that certificate contains an Dilithium key,
+ * and full-static ECDH is not used).
+ *
+ *
+ * \param cc       client context.
+ * \param iecdsa   Dilithium verification implementation.
+ */
+static inline void
+br_ssl_engine_set_dilithium(br_ssl_engine_context *cc, br_dilithium_vrfy idilithium)
+{
+	cc->idilithium = idilithium;
+}
+
+/**
+ * \brief Set the "default" Dilithium implementation (signature verification).
+ *
+ * This function sets the Dilithium implementation (signature verification)
+ * to the fastest implementation available on the current platform.
+ *
+ * \param cc   SSL engine context.
+ */
+void br_ssl_engine_set_default_dilithium(br_ssl_engine_context *cc);
+
+/**
+ * \brief Get the Dilithium implementation (signature verification) configured
+ * in the provided engine.
+ *
+ * \param cc   SSL engine context.
+ * \return  the Dilithium signature verification implementation.
+ */
+static inline br_dilithium_vrfy
+br_ssl_engine_get_dilithium(br_ssl_engine_context *cc)
+{
+	return cc->idilithium;
 }
 
 /**
@@ -3462,7 +3505,7 @@ typedef struct {
 	const br_dilithium_private_key *sk;
 	const br_multihash_context *mhash;
 	br_dilithium_sign idilithium;
-	br_prng_class **rnd;
+	const br_prng_class **rnd;
 #endif
 } br_ssl_server_policy_dilithium_context;
 

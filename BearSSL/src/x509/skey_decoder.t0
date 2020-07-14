@@ -80,7 +80,7 @@ cc: read-blob-inner ( addr len -- addr len ) {
 
 \ Get the length of the key_data buffer.
 : len-key_data
-	CX 0 8191 { 3 * BR_X509_BUFSIZE_SIG } ;
+	CX 0 16383 { 3 * BR_X509_BUFSIZE_SIG } ;
 
 \ Get the address and length for the key_data buffer.
 : addr-len-key_data ( -- addr len )
@@ -120,6 +120,12 @@ cc: set-ec-key ( curve xlen -- ) {
 	CTX->key.ec.curve = curve;
 	CTX->key.ec.x = CTX->key_data;
 	CTX->key.ec.xlen = xlen;
+}
+
+\ Set the private key (Dilithium).
+cc: set-dilithium-key ( klen -- ) {
+	size_t klen = T0_POP();
+	br_dilithium_keygen_load_private_key(CTX->key_data, klen, &CTX->key.dilithium);
 }
 
 \ Get the bit length for an integer (unsigned).
@@ -254,23 +260,61 @@ cc: set-ec-key ( curve xlen -- ) {
 	\ The caller will close the sequence.
 	;
 
+\ Decode a Dilithium key, starting with the SEQUENCE tag.
+: decode-DLTHM ( lim -- lim )
+	read-sequence-open
+
+	\ Version should be 1.
+	read-tag 0x02 check-tag-primitive read-small-int-value 1- if
+		ERR_X509_UNSUPPORTED fail
+	then
+
+	\ Read tag for the private key; should be OCTET STRING. Then use the
+	\ decode-DLTHM-next function for the remainder of the key.
+	read-tag 0x04 check-tag-primitive
+	decode-DLTHM-next
+
+	\ Close the SEQUENCE.
+	close-elt ;
+
+\ Decode a Dilithium key; the version, and the tag for the OCTET STRING, have
+\ already been read
+: decode-DLTHM-next ( lim -- lim )
+	\ Read the private key proper.
+	read-length-open-elt
+	dup dup { klen } len-key_data > if ERR_X509_UNSUPPORTED fail then
+	addr-key_data read-blob
+
+	\ skip the remaining bytes (public key)
+	skip-remaining
+
+	\ Set the Dilithium key.
+	klen set-dilithium-key
+
+	\ The caller will close the sequence.
+	;
+
 \ Decode a PKCS#8 object. The version and the tag for the AlgorithmIdentifier
 \ structure have already been read. This function returns the key type.
 : decode-PKCS8-next ( lim -- lim keytype )
 	\ Decode the AlgorithmIdentifier.
 	read-length-open-elt
 	read-OID ifnot ERR_X509_UNSUPPORTED fail then
-	{ ; is-rsa curve }
+	{ ; key-type curve } \ 0 = rsa, 1 = EC, 2 = Dilithium
 	choice
 		rsaEncryption eqOID uf
 			\ RSA private key. We ignore the parameters.
-			skip-remaining -1 >is-rsa
+			skip-remaining 0 >key-type
 		enduf
 		id-ecPublicKey eqOID uf
 			\ EC private key. Parameters, if present, shall
 			\ identify the curve.
-			0 >is-rsa
+			1 >key-type
 			dup if read-curve-ID else 0 then >curve
+		enduf
+		id-dilithiumPublicKey eqOID uf
+			\ Dilithium private key. We ignore the parameters.
+			skip-remaining 2 >key-type
 		enduf
 
 		ERR_X509_UNSUPPORTED fail
@@ -280,10 +324,14 @@ cc: set-ec-key ( curve xlen -- ) {
 	\ Open private key value and decode it.
 	read-tag 0x04 check-tag-primitive
 	read-length-open-elt
-	is-rsa if
+	key-type = 0 if
 		decode-RSA
 	else
-		curve decode-EC
+		key-type = 1 if
+			curve decode-EC
+		else
+			decode-DLTHM
+		then
 	then
 	close-elt
 
@@ -291,7 +339,15 @@ cc: set-ec-key ( curve xlen -- ) {
 	skip-remaining
 
 	\ Return the key type.
-	is-rsa if KEYTYPE_RSA else KEYTYPE_EC then
+	key-type = 0 if
+		KEYTYPE_RSA
+	else
+		key-type = 1 if
+			KEYTYPE_EC
+		else
+			KEYTYPE_DLTHM
+		then
+	then
 	;
 
 \ Decode a private key.
@@ -325,6 +381,14 @@ cc: set-ec-key ( curve xlen -- ) {
 	\ contents are the unsigned big-endian encoding of the key value,
 	\ which is exactly what we want.
 	\
+	\ Custom Dilithium private key format is defined similarly to the 
+	\ EC private key formatin RFC 5915:
+	\   DilithiumPrivateKey ::= SEQUENCE {
+	\       version        INTEGER,   -- always 0
+	\       privateKey     OCTET STRING,
+	\       publicKey      BIT STRING OPTIONAL
+	\   }
+	\
 	\ PKCS#8 (unencrypted) is:
 	\   OneAsymmetricKey ::= SEQUENCE {
 	\       version      INTEGER,   -- 0 or 1
@@ -345,20 +409,42 @@ cc: set-ec-key ( curve xlen -- ) {
 
 	\ All our schemas begin with a small INTEGER which is either 0 or
 	\ 1. We don't care which it is.
-	read-tag 0x02 check-tag-primitive read-small-int-value 1 > if
+
+	\ HACK for Dilithium raw private key detection, which shares its 
+	\ privateKey data type with EC keys, the integer for Dilithium keys
+	\ will be always 0, whereas the integer for EC keys is already always
+	\ 1, thus this integer can be used to differentiate between the two key
+	\ types, in an attempt to not have to substantially rework the logic 
+	\ that follows 
+	read-tag 0x02 check-tag-primitive read-small-int-value dup 1 > if
 		ERR_X509_UNSUPPORTED fail
 	then
 
 	\ Get next tag: it should be either an INTEGER (RSA private key),
-	\ an OCTET STRING (EC private key), or a SEQUENCE (for an
-	\ AlgorithmIdentifier, in a PKCS#8 object).
-	read-tag
-	case
-		0x02 of check-primitive decode-RSA-next KEYTYPE_RSA endof
-		0x04 of check-primitive 0 decode-EC-next KEYTYPE_EC endof
-		0x10 of check-constructed decode-PKCS8-next endof
-		ERR_X509_UNSUPPORTED fail
-	endcase
+	\ an OCTET STRING (EC private key or Dilithium private key), 
+	\ or a SEQUENCE (for an AlgorithmIdentifier, in a PKCS#8 object).
+	
+	\ To differentiate between EC and Dilithium private keys, the previous 
+	\ small integer value is used since it has been made to always be different
+	0 = if 
+		\ In this situation we're working with a potential Dilithium key
+		read-tag
+		case
+			0x02 of check-primitive decode-RSA-next KEYTYPE_RSA endof
+			0x04 of check-primitive decode-DLTHM-next KEYTYPE_DLTHM endof
+			0x10 of check-constructed decode-PKCS8-next endof
+			ERR_X509_UNSUPPORTED fail
+		endcase
+	else
+		\ In this situation we're working with a potential EC key
+		read-tag
+		case
+			0x02 of check-primitive decode-RSA-next KEYTYPE_RSA endof
+			0x04 of check-primitive 0 decode-EC-next KEYTYPE_EC endof
+			0x10 of check-constructed decode-PKCS8-next endof
+			ERR_X509_UNSUPPORTED fail
+		endcase
+	then
 	{ key-type }
 
 	\ Close the SEQUENCE.
@@ -366,7 +452,6 @@ cc: set-ec-key ( curve xlen -- ) {
 
 	\ Set the key type, which marks the decoding as a success.
 	key-type addr-key_type set8
-
 	\ Read one byte, then fail: if the read succeeds, then there is
 	\ some trailing byte.
 	read8-nc ERR_X509_EXTRA_ELEMENT fail

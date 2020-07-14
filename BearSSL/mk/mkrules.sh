@@ -68,9 +68,11 @@ coresrc=" \
 	src/codec/enc64le.c \
 	src/codec/pemdec.c \
 	src/codec/pemenc.c \
+	src/crystals/dilithium_default_key_derivation.c \
 	src/crystals/dilithium_default_keygen.c \
 	src/crystals/dilithium_default_sign.c \
 	src/crystals/dilithium_default_verify.c \
+	src/crystals/dilithium_third_party_key_derivation.c \
 	src/crystals/dilithium_third_party_keygen.c \
 	src/crystals/dilithium_third_party_sign.c \
 	src/crystals/dilithium_third_party_verify.c \
@@ -281,6 +283,7 @@ coresrc=" \
 	src/ssl/ssl_engine_default_aesgcm.c \
 	src/ssl/ssl_engine_default_chapol.c \
 	src/ssl/ssl_engine_default_descbc.c \
+	src/ssl/ssl_engine_default_dilithium.c \
 	src/ssl/ssl_engine_default_ec.c \
 	src/ssl/ssl_engine_default_ecdsa.c \
 	src/ssl/ssl_engine_default_kyber.c \
@@ -360,6 +363,8 @@ coresrc=" \
 	src/symcipher/poly1305_ctmulq.c \
 	src/symcipher/poly1305_i15.c \
 	src/x509/asn1enc.c \
+	src/x509/encode_dilithium_pk8der.c \
+	src/x509/encode_dilithium_rawder.c \
 	src/x509/encode_ec_pk8der.c \
 	src/x509/encode_ec_rawder.c \
 	src/x509/encode_rsa_pk8der.c \

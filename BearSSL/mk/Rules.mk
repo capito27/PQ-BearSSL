@@ -20,9 +20,11 @@ OBJ = \
  $(OBJDIR)$Penc64le$O \
  $(OBJDIR)$Ppemdec$O \
  $(OBJDIR)$Ppemenc$O \
+ $(OBJDIR)$Pdilithium_default_key_derivation$O \
  $(OBJDIR)$Pdilithium_default_keygen$O \
  $(OBJDIR)$Pdilithium_default_sign$O \
  $(OBJDIR)$Pdilithium_default_verify$O \
+ $(OBJDIR)$Pdilithium_third_party_key_derivation$O \
  $(OBJDIR)$Pdilithium_third_party_keygen$O \
  $(OBJDIR)$Pdilithium_third_party_sign$O \
  $(OBJDIR)$Pdilithium_third_party_verify$O \
@@ -233,6 +235,7 @@ OBJ = \
  $(OBJDIR)$Pssl_engine_default_aesgcm$O \
  $(OBJDIR)$Pssl_engine_default_chapol$O \
  $(OBJDIR)$Pssl_engine_default_descbc$O \
+ $(OBJDIR)$Pssl_engine_default_dilithium$O \
  $(OBJDIR)$Pssl_engine_default_ec$O \
  $(OBJDIR)$Pssl_engine_default_ecdsa$O \
  $(OBJDIR)$Pssl_engine_default_kyber$O \
@@ -312,6 +315,8 @@ OBJ = \
  $(OBJDIR)$Ppoly1305_ctmulq$O \
  $(OBJDIR)$Ppoly1305_i15$O \
  $(OBJDIR)$Pasn1enc$O \
+ $(OBJDIR)$Pencode_dilithium_pk8der$O \
+ $(OBJDIR)$Pencode_dilithium_rawder$O \
  $(OBJDIR)$Pencode_ec_pk8der$O \
  $(OBJDIR)$Pencode_ec_rawder$O \
  $(OBJDIR)$Pencode_rsa_pk8der$O \
@@ -458,6 +463,9 @@ $(OBJDIR)$Ppemdec$O: src$Pcodec$Ppemdec.c $(HEADERSPRIV)
 $(OBJDIR)$Ppemenc$O: src$Pcodec$Ppemenc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ppemenc$O src$Pcodec$Ppemenc.c
 
+$(OBJDIR)$Pdilithium_default_key_derivation$O: src$Pcrystals$Pdilithium_default_key_derivation.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_key_derivation$O src$Pcrystals$Pdilithium_default_key_derivation.c
+
 $(OBJDIR)$Pdilithium_default_keygen$O: src$Pcrystals$Pdilithium_default_keygen.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_keygen$O src$Pcrystals$Pdilithium_default_keygen.c
 
@@ -466,6 +474,9 @@ $(OBJDIR)$Pdilithium_default_sign$O: src$Pcrystals$Pdilithium_default_sign.c $(H
 
 $(OBJDIR)$Pdilithium_default_verify$O: src$Pcrystals$Pdilithium_default_verify.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_verify$O src$Pcrystals$Pdilithium_default_verify.c
+
+$(OBJDIR)$Pdilithium_third_party_key_derivation$O: src$Pcrystals$Pdilithium_third_party_key_derivation.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_key_derivation$O src$Pcrystals$Pdilithium_third_party_key_derivation.c
 
 $(OBJDIR)$Pdilithium_third_party_keygen$O: src$Pcrystals$Pdilithium_third_party_keygen.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_keygen$O src$Pcrystals$Pdilithium_third_party_keygen.c
@@ -1097,6 +1108,9 @@ $(OBJDIR)$Pssl_engine_default_chapol$O: src$Pssl$Pssl_engine_default_chapol.c $(
 $(OBJDIR)$Pssl_engine_default_descbc$O: src$Pssl$Pssl_engine_default_descbc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_descbc$O src$Pssl$Pssl_engine_default_descbc.c
 
+$(OBJDIR)$Pssl_engine_default_dilithium$O: src$Pssl$Pssl_engine_default_dilithium.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_dilithium$O src$Pssl$Pssl_engine_default_dilithium.c
+
 $(OBJDIR)$Pssl_engine_default_ec$O: src$Pssl$Pssl_engine_default_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_ec$O src$Pssl$Pssl_engine_default_ec.c
 
@@ -1333,6 +1347,12 @@ $(OBJDIR)$Ppoly1305_i15$O: src$Psymcipher$Ppoly1305_i15.c $(HEADERSPRIV)
 
 $(OBJDIR)$Pasn1enc$O: src$Px509$Pasn1enc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pasn1enc$O src$Px509$Pasn1enc.c
+
+$(OBJDIR)$Pencode_dilithium_pk8der$O: src$Px509$Pencode_dilithium_pk8der.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_dilithium_pk8der$O src$Px509$Pencode_dilithium_pk8der.c
+
+$(OBJDIR)$Pencode_dilithium_rawder$O: src$Px509$Pencode_dilithium_rawder.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_dilithium_rawder$O src$Px509$Pencode_dilithium_rawder.c
 
 $(OBJDIR)$Pencode_ec_pk8der$O: src$Px509$Pencode_ec_pk8der.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_ec_pk8der$O src$Px509$Pencode_ec_pk8der.c

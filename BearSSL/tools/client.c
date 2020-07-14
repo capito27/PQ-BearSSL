@@ -146,6 +146,7 @@ typedef struct {
 	size_t chain_len;
 	private_key *sk;
 	int issuer_key_type;
+	const br_prng_class **rnd;
 } ccert_context;
 
 static void
@@ -268,7 +269,7 @@ cc_choose(const br_ssl_client_certificate_class **pctx,
 			fprintf(stderr, "\n");
 		}
 		if ((auth_types & 0xFF00) != 0) {
-			fprintf(stderr, "supported: ECDSA signatures:");
+			fprintf(stderr, "supported: ECDSA and/or Dilithium signatures:");
 			print_hashes(auth_types >> 8, hashes >> 8);
 			fprintf(stderr, "\n");
 		}
@@ -331,6 +332,19 @@ cc_choose(const br_ssl_client_certificate_class **pctx,
 			return;
 		}
 		break;
+	case BR_KEYTYPE_DLTHM:
+		if ((choices->hash_id = choose_hash(auth_types)) >= 0) {
+			if (zc->verbose) {
+				fprintf(stderr, "using Dilithium, hash = %d (%s)\n",
+					choices->hash_id,
+					hash_function_name(choices->hash_id));
+			}
+			choices->auth_type = BR_AUTH_DILITHIUM;
+			choices->chain = zc->chain;
+			choices->chain_len = zc->chain_len;
+			return;
+		}
+		break;
 	}
 	if (zc->verbose) {
 		fprintf(stderr, "no matching client certificate\n");
@@ -349,6 +363,7 @@ cc_do_keyx(const br_ssl_client_certificate_class **pctx,
 	uint32_t r;
 
 	zc = (ccert_context *)pctx;
+	
 	iec = br_ec_get_default();
 	r = iec->mul(data, *len, zc->sk->key.ec.x,
 		zc->sk->key.ec.xlen, zc->sk->key.ec.curve);
@@ -427,6 +442,35 @@ cc_do_sign(const br_ssl_client_certificate_class **pctx,
 		if (sig_len == 0) {
 			if (zc->verbose) {
 				fprintf(stderr, "ERROR: ECDSA-sign failure\n");
+			}
+			return 0;
+		}
+		return sig_len;
+
+	case BR_KEYTYPE_DLTHM:
+		hc = get_hash_impl(hash_id);
+		if (hc == NULL) {
+			if (zc->verbose) {
+				fprintf(stderr, "ERROR: cannot Dilithium-sign with"
+					" unknown hash function: %d\n",
+					hash_id);
+			}
+			return 0;
+		}
+		if (len < BR_DILITHIUM_SIGNATURE_SIZE(zc->sk->key.dilithium.mode)) {
+			if (zc->verbose) {
+				fprintf(stderr, "ERROR: cannot Dilithium-sign"
+					" (output buffer = %lu, required size = %lu)\n",
+					(unsigned long)len, 
+					(unsigned long)BR_DILITHIUM_SIGNATURE_SIZE(zc->sk->key.dilithium.mode));
+			}
+			return 0;
+		}
+		sig_len = br_dilithium_sign_get_default()(
+			zc->rnd, &zc->sk->key.dilithium, hv, hv_len, data, len);
+		if (sig_len == 0) {
+			if (zc->verbose) {
+				fprintf(stderr, "ERROR: Dilithium-sign failure\n");
 			}
 			return 0;
 		}
@@ -977,6 +1021,10 @@ do_client(int argc, char *argv[])
 		if ((req & REQ_ECDH) != 0) {
 			br_ssl_engine_set_default_ec(&cc.eng);
 		}
+		if ((req & REQ_KYBER_DLTHM) != 0) {
+			br_ssl_engine_set_default_kyber(&cc.eng);
+			br_ssl_engine_set_default_dilithium(&cc.eng);
+		}
 	}
 	if (fallback) {
 		suite_ids[num_suites ++] = 0x5600;
@@ -1010,6 +1058,8 @@ do_client(int argc, char *argv[])
 	br_x509_minimal_set_rsa(&xc, br_rsa_pkcs1_vrfy_get_default());
 	br_x509_minimal_set_ecdsa(&xc,
 		br_ec_get_default(), br_ecdsa_vrfy_asn1_get_default());
+	br_x509_minimal_set_dilithium(&xc,
+		br_dilithium_vrfy_get_default());
 
 	/*
 	 * If there is no provided trust anchor, then certificate validation
@@ -1043,7 +1093,7 @@ do_client(int argc, char *argv[])
 		zc.chain = chain;
 		zc.chain_len = chain_len;
 		zc.sk = sk;
-		if (nostaticecdh || sk->key_type != BR_KEYTYPE_EC) {
+		if (nostaticecdh || (sk->key_type != BR_KEYTYPE_EC && sk->key_type != BR_KEYTYPE_DLTHM)) {
 			zc.issuer_key_type = 0;
 		} else {
 			zc.issuer_key_type = get_cert_signer_algo(&chain[0]);

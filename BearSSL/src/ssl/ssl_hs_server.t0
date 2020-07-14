@@ -311,9 +311,7 @@ static int
 do_kyber_kex_part1(br_ssl_server_context *ctx)
 {
 	unsigned algo_id;
-	unsigned mask;
-	const unsigned char *order;
-	size_t olen, glen;
+	size_t glen;
 	size_t hv_len, sig_len;
 
 	// Verify that kyber is enabled and its parameters are valid
@@ -372,6 +370,44 @@ do_kyber_kex_part1(br_ssl_server_context *ctx)
 	sig_len = (*ctx->policy_vtable)->do_sign(ctx->policy_vtable,
 		algo_id, ctx->eng.pad, hv_len, sizeof ctx->eng.pad);
 	return sig_len ? (int)sig_len : -BR_ERR_INVALID_ALGORITHM;
+}
+
+/*
+ * Do the Kyber KEM based key exchange (part 2: computation of the shared secret
+ * from the secret sent by the client).
+ */
+static void
+do_kyber_kex_part2(br_ssl_server_context *ctx, int prf_id,
+	unsigned char *ct, size_t ct_len)
+{
+	unsigned char client_ss[32];
+    br_shake_context sc;
+	
+
+	// Decrypt the ciphertext (an error will be returned on too large a ciphertext)
+	// An invalid but properly sized ciphertext will output a pseudo-random secret
+	if (!ctx->eng.ikyber_dec(&ctx->eng.kyber_sk, client_ss, sizeof client_ss, ct, ct_len)) {
+		return;
+	}
+
+	/*
+	 * Compute the pre-master secret.
+	 * It is obtained by Shake256(client_ss | server_ss)
+	 */
+	br_shake_init(&sc, 256);
+	br_shake_inject(&sc, client_ss, sizeof client_ss);
+	br_shake_inject(&sc, ctx->eng.kyber_own_ss, sizeof ctx->eng.kyber_own_ss);
+	br_shake_flip(&sc, 0);
+	br_shake_produce(&sc, client_ss, sizeof client_ss);
+
+	br_ssl_engine_compute_master(&ctx->eng, prf_id, client_ss, sizeof client_ss);
+
+	/*
+	 * Clear the Kyber private key. Forward Secrecy is achieved insofar
+	 * as that key does not get stolen, so we'd better destroy it
+	 * as soon as it ceases to be useful.
+	 */
+	memset(ctx->eng.kyber_priv_key, 0, ctx->eng.kyber_priv_key_len);
 }
 
 /*
@@ -469,7 +505,7 @@ verify_CV_sig(br_ssl_server_context *ctx, size_t sig_len)
 : addr-ctx:
 	next-word { field }
 	"addr-" field + 0 1 define-word
-	0 8192 "offsetof(br_ssl_server_context, " field + ")" + make-CX
+	0 16383 "offsetof(br_ssl_server_context, " field + ")" + make-CX
 	postpone literal postpone ; ;
 
 addr-ctx: client_max_version
@@ -876,7 +912,7 @@ cc: save-session ( -- ) {
 		repeat
 		close-elt
 	then
-	"Use Kyber ?" addr-use_kyber get8 DBG2
+
 	\ Close message.
 	close-elt
 
@@ -994,7 +1030,6 @@ cc: save-session ( -- ) {
 	css-off addr-client_suites - 2 >>
 	dup ifnot
 		\ No common cipher suite: handshake failure.
-		"No common cipher suites" DBG
 		40 fail-alert
 	then
 	addr-client_suites_num set8
@@ -1009,7 +1044,6 @@ cc: save-session ( -- ) {
 	\ parameters.
 	call-policy-handler ifnot 40 fail-alert then
 
-	"Chosen Cipher Suite : " addr-cipher_suite get16 DBG2
 	\ We are not resuming a session.
 	0 ;
 	
@@ -1088,9 +1122,7 @@ cc: save-session ( -- ) {
 		then
 	else
 		drop
-	then 
-
-	"Server Hello done" DBG	;
+	then ;
 
 \ Do the first part of ECDHE. Returned value is the computed signature
 \ length, or a negative error code on error.
@@ -1113,9 +1145,8 @@ cc: do-kyber-kex-part1 ( -- len ) {
 
 \ Write the Server Key Exchange message (if applicable).
 : write-ServerKeyExchange ( -- )
-	addr-cipher_suite get16 use-server-key-exchange? ifnot ret then
+	addr-cipher_suite get16 dup use-ecdhe? swap use-kyber-dlthm? or ifnot ret then
 
-	"Server Key Exchange start" DBG
 
 	\ If using TLS-1.2+, then the hash function and signature
 	\ algorithm are explicitly encoded in the message.
@@ -1161,11 +1192,11 @@ cc: do-kyber-kex-part1 ( -- len ) {
 			dup 0xFF00 < if
 				write16
 			else
-				0xFF and write8
-				\ 'use-rsa-ecdhe?' returns -1 for RSA, 0 for
-				\ ECDSA. The byte on the wire shall be 1 for RSA,
-				\ 3 for ECDSA.
-				addr-cipher_suite get16 use-rsa-ecdhe? 1 << 3 + write8
+				0xFF and write8 \ Write the hash algorithm
+				\ Write the signature algorithm.
+				\ The byte on the wire shall be 1 for RSA,
+				\ 3 for ECDSA or 4 for Dilithium.
+				addr-cipher_suite get16 get-key-exchange-signature-type write8
 			then
 		then
 
@@ -1180,9 +1211,7 @@ cc: do-kyber-kex-part1 ( -- len ) {
 
 		\ Write the type and length of the message
 		12 write8
-		dilithium-sig-len addr-kyber_ct_len get16 addr-kyber_pub_key_len get16 + + 9 + dup write24
-
-		"Server Key Exchange Protocol length" swap DBG2
+		dilithium-sig-len addr-kyber_ct_len get16 addr-kyber_pub_key_len get16 + + 9 + write24
 
 		\ "Curve type": type 0x04 without any further field.
 		4 write8
@@ -1199,7 +1228,7 @@ cc: do-kyber-kex-part1 ( -- len ) {
 			write16
 		else
 			0xFF and write8 \ hash type
-			5 write8 \ signature type (Dilithium custom type 5 on the wire)
+			addr-cipher_suite get16 get-key-exchange-signature-type write8 \ signature type
 		then
 	
 		\ Ciphertext Dilithium Signature.
@@ -1240,6 +1269,7 @@ cc: ta-names-total-length ( -- len ) {
 	then
 	supports-rsa-sign? if 1+ over if 1 write8 then then
 	supports-ecdsa? if 1+ over if 64 write8 then then
+	supports-dilithium? if 1+ over if 99 write8 then then
 	swap drop ;
 
 : write-signhash-inner2 ( dow algo hashes len id -- dow algo hashes len )
@@ -1275,6 +1305,12 @@ cc: ta-names-total-length ( -- len ) {
 	then
 	supports-ecdsa? if
 		3 supported-hash-functions drop
+		write-signhash-inner1 len + >len
+	then
+	supports-dilithium? if
+		4 supported-hash-functions drop
+		\ For dilithium, we don't actually support sha1, so mask it off from the supported list
+		0xFB and
 		write-signhash-inner1 len + >len
 	then
 	drop len ;
@@ -1325,11 +1361,12 @@ cc: copy-dn-chunk ( -- len ) {
 	\    ecdsa_sign (64)
 	\    rsa_fixed_ecdh (65)
 	\    ecdsa_fixed_ecdh (66)
-	\ rsa_sign and ecdsa_sign require, respectively, RSA and ECDSA
-	\ support. Static ECDH requires that the cipher suite is ECDH.
-	\ When we ask for static ECDH, we always send both rsa_fixed_ecdh
-	\ and ecdsa_fixed_ecdh because what matters there is what the
-	\ X.509 engine may support, and we do not control that.
+	\    dilithium_sign (99)     Custom new authentication type
+	\ rsa_sign, ecdsa_sign and dilithium sign require, respectively, 
+	\ RSA, ECDSA and Dilithium support. Static ECDH requires that the
+	\ cipher suite is ECDH. When we ask for static ECDH, we always 
+	\ send both rsa_fixed_ecdh and ecdsa_fixed_ecdh because what matters
+	\ there is what the X.509 engine may support, and we do not control that.
 	\
 	\ With TLS 1.2, we must also send a list of supported signature
 	\ and hash algorithms. That list is supposed to qualify both
@@ -1398,6 +1435,13 @@ cc: do-ecdhe-part2 ( len prf_id -- ) {
 	do_ecdhe_part2(CTX, prf_id, ENG->pad, len);
 }
 
+\ Do the second part of Kyber based key exchange.
+cc: do-kyber-kex-part2 ( len prf_id -- ) {
+	int prf_id = T0_POPi();
+	size_t len = T0_POP();
+	do_kyber_kex_part2(CTX, prf_id, ENG->pad, len);
+}
+
 \ Perform static ECDH. The point from the client is the public key
 \ extracted from its certificate.
 cc: do-static-ecdh ( prf_id -- ) {
@@ -1419,7 +1463,16 @@ cc: do-static-ecdh ( prf_id -- ) {
 		addr-pad swap read-blob
 		enc-rsa-len addr-cipher_suite get16 prf-id do-rsa-decrypt
 	then
-	addr-cipher_suite get16 dup use-server-key-exchange? swap use-ecdh? { ecdhe ecdh }
+	addr-cipher_suite get16 use-kyber-dlthm? if
+			\ Kyber based key exchange : we expect a Kyber ciphertext
+			read16
+			dup 1568 > if ERR_LIMIT_EXCEEDED fail then \ Max supported Kyber Ciphertext length
+			dup { enc-kyber-len }
+			addr-pad swap read-blob
+			enc-kyber-len addr-cipher_suite get16 prf-id do-kyber-kex-part2
+	then
+
+	addr-cipher_suite get16 dup use-ecdhe? swap use-ecdh? { ecdhe ecdh }
 	ecdh ecdhe or if
 		\ ECDH or ECDHE key exchange: we expect an EC point.
 		read8 dup { ec-point-len }
@@ -1512,7 +1565,7 @@ cc: verify-CV-sig ( sig-len -- err ) {
 	\ which must be compatible with the key type.
 	addr-version get16 0x0303 >= if
 		\ Get hash function, then signature algorithm. The
-		\ signature algorithm is 1 (RSA) or 3 (ECDSA) while our
+		\ signature algorithm is 1 (RSA), 3 (ECDSA) or 4 (Dilithium) while our
 		\ symbolic constants for key types are 1 (RSA) or 2 (EC).
 		read16
 		dup 0xFF and 1+ 1 >> key-type = ifnot

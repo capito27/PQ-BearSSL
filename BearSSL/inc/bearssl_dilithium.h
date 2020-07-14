@@ -62,8 +62,8 @@ extern "C" {
 
 // These define will print the contents of the relevant data
 //#define DILITHIUM_PRINT_KEYGEN
-#define DILITHIUM_PRINT_SIGN
-#define DILITHIUM_PRINT_VERIFY
+//#define DILITHIUM_PRINT_SIGN
+//#define DILITHIUM_PRINT_VERIFY
 
 /**
  * \brief Flag that enables faster signing (roughly 25% faster) at the cost of doubling memory usage during
@@ -187,9 +187,9 @@ typedef uint32_t (*br_dilithium_sign)(const br_prng_class **rnd,
  * \param sig_len       signature length (in bytes).
  * \return 1 on success, 0 on error.
  */
-typedef uint32_t (*br_dilithium_verify)(const br_dilithium_public_key *pk,
-                                        const void *sig, size_t sig_len,
-                                        const void *msg, size_t msg_len);
+typedef uint32_t (*br_dilithium_vrfy)(const br_dilithium_public_key *pk,
+                                        const void *msg, size_t msg_len,
+                                        const void *sig, size_t sig_len);
 
 /**
  * \brief Dilithium signature with the "third party" engine.
@@ -212,18 +212,18 @@ uint32_t br_dilithium_third_party_sign(const br_prng_class **rnd,
 /**
  * \brief Dilithium signature verification with the "third party" engine.
  *
- * \see br_dilithium_verify
+ * \see br_dilithium_vrfy
  *
  * \param pk            Dilithium public key.
  * \param msg           destination message buffer
- * \param msg_len   destination message buffer max length (in bytes).
+ * \param msg_len       destination message buffer max length (in bytes).
  * \param sig           signature buffer.
  * \param sig_len       signature length (in bytes).
  * \return 1 on success, 0 on error.
  */
-uint32_t br_dilithium_third_party_verify(const br_dilithium_public_key *pk,
-                                         const void *sig, size_t sig_len,
-                                         const void *msg, size_t msg_len);
+uint32_t br_dilithium_third_party_vrfy(const br_dilithium_public_key *pk,
+                                         const void *msg, size_t msg_len,
+                                         const void *sig, size_t sig_len);
 
 /**
  * \brief Get "default" Dilithium implementation (signature engine).
@@ -243,7 +243,7 @@ br_dilithium_sign br_dilithium_sign_get_default(void);
  *
  * \return  the default implementation.
  */
-br_dilithium_verify br_dilithium_verify_get_default(void);
+br_dilithium_vrfy br_dilithium_vrfy_get_default(void);
 
 
 /**
@@ -365,16 +365,84 @@ uint32_t br_dilithium_third_party_keygen(const br_prng_class **rng_ctx,
                                          br_dilithium_public_key *pk, void *kbuf_pub,
                                          unsigned mode);
 
-
 /**
- * \brief Get "default" RSA implementation (key pair generation).
+ * \brief Get "default" Dilithium implementation (key pair generation).
  *
- * This returns the preferred implementation of RSA (key pair generation)
+ * This returns the preferred implementation of Dilithium (key pair generation)
  * on the current system.
  *
  * \return  the default implementation.
  */
 br_dilithium_keygen br_dilithium_keygen_get_default(void);
+
+/**
+ * \brief Type for Kyber public key derivation implementation.
+ *
+ * This function derivates the associated public key to a given private key.
+ * The public key elements are written in `kbuf_pub`, 
+ * with pointers and lengths set in `pk`.
+ * 
+ * The given buffer MUST be large enough to hold the derivated public key
+ *
+ * Returned value is 1 on success, 0 on error.
+ *
+ * \param sk          Dilithium private key structure (source)
+ * \param pk          Dilithium public key structure (destination)
+ * \param kbuf_pub    buffer for public key elements
+ * \return  1 on success, 0 on error (invalid parameters)
+ */
+typedef uint32_t (*br_dilithium_public_key_derivate)(
+    const br_dilithium_private_key *sk,
+    br_dilithium_public_key *pk, void *kbuf_pub);
+
+/**
+ * \brief Kyber public key derivation with the "third_party" engine.
+ *
+ * \see br_dilithium_public_key_derivate
+ *
+ * \param sk          Dilithium private key structure (source)
+ * \param pk          Dilithium public key structure (destination)
+ * \param kbuf_pub    buffer for public key elements
+ * \return  1 on success, 0 on error (invalid parameters)
+ */
+uint32_t br_dilithium_third_party_public_key_derivate(
+    const br_dilithium_private_key *sk, 
+    br_dilithium_public_key *pk, void *kbuf_pub);
+
+/**
+ * \brief Get "default" Dilithium implementation (public key derivation).
+ *
+ * This returns the preferred implementation of Dilithium (public key derivation)
+ * on the current system.
+ *
+ * \return  the default implementation.
+ */
+br_dilithium_public_key_derivate br_dilithium_public_key_derivate_get_default(void);
+
+
+/**
+ * \brief Helper function to load a dilithium private key from an associated buffer
+ * 
+ * This function will NOT copy any material from the key buffer, as such, 
+ * the key buffer MUST remain valid as long as its associated private key structure
+ *
+ * \param kbuf       Dilithium private key buffer containing the private key material
+ * \param kbuf_len   Dilithium private key buffer length
+ * \param sk         Dilithium private key structure (destination)
+ */
+void br_dilithium_keygen_load_private_key(void *kbuf, size_t kbuf_len, br_dilithium_private_key *sk);
+
+/**
+ * \brief Helper function to load a dilithium public key from an associated buffer
+ * 
+ * This function will NOT copy any material from the key buffer, as such, 
+ * the key buffer MUST remain valid as long as its associated public key structure
+ *
+ * \param kbuf       Dilithium public key buffer containing the public key material
+ * \param kbuf_len   Dilithium public key buffer length
+ * \param pk         Dilithium public key structure (destination)
+ */
+void br_dilithium_keygen_load_public_key(void *kbuf, size_t kbuf_len, br_dilithium_public_key *pk);
 
 
 #ifdef __cplusplus

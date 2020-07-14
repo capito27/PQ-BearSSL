@@ -143,6 +143,62 @@ print_ec(const br_ec_public_key *pk, int print_text, int print_C)
 }
 
 static void
+print_dilithium(const br_dilithium_public_key *pk, int print_text, int print_C)
+{
+	if (print_text) {
+		size_t u;
+
+		printf("RHO = ");
+		for (u = 0; u < pk->rholen; u ++) {
+			printf("%02X", pk->rho[u]);
+		}
+		printf("\n");
+				printf("T1 = ");
+		for (u = 0; u < pk->t1len; u ++) {
+			printf("%02X", pk->t1[u]);
+		}
+		printf("\n");
+		
+		printf("mode = %d\n", pk->mode);
+	}
+	if (print_C) {
+		size_t u;
+
+		printf("\nstatic const unsigned char DLTHM_RHO[] = {");
+		for (u = 0; u < pk->rholen; u ++) {
+			if (u != 0) {
+				printf(",");
+			}
+			if (u % 12 == 0) {
+				printf("\n\t");
+			} else {
+				printf(" ");
+			}
+			printf("0x%02X", pk->rho[u]);
+		}
+		printf("\n};\n");
+		printf("\nstatic const unsigned char DLTHM_T1[] = {");
+		for (u = 0; u < pk->t1len; u ++) {
+			if (u != 0) {
+				printf(",");
+			}
+			if (u % 12 == 0) {
+				printf("\n\t");
+			} else {
+				printf(" ");
+			}
+			printf("0x%02X", pk->t1[u]);
+		}
+		printf("\n};\n");
+		printf("\nstatic const br_ec_public_key EC = {\n");
+		printf("\t(unsigned char *)DLTHM_RHO, sizeof DLTHM_RHO,\n");
+		printf("\t(unsigned char *)DLTHM_T1, sizeof DLTHM_T1,\n");
+		printf("\t%d,\n", pk->mode);
+		printf("};\n");
+	}
+}
+
+static void
 usage_verify(void)
 {
 	fprintf(stderr,
@@ -266,6 +322,8 @@ do_verify(int argc, char *argv[])
 	br_x509_minimal_set_rsa(&mc, &br_rsa_i31_pkcs1_vrfy);
 	br_x509_minimal_set_ecdsa(&mc,
 		&br_ec_prime_i31, &br_ecdsa_i31_vrfy_asn1);
+	br_x509_minimal_set_dilithium(&mc,
+		br_dilithium_vrfy_get_default());
 
 	mc.vtable->start_chain(&mc.vtable, sni);
 	for (u = 0; u < VEC_LEN(chain); u ++) {
@@ -329,6 +387,13 @@ do_verify(int argc, char *argv[])
 					ec_curve_name(pk->key.ec.curve));
 			}
 			print_ec(&pk->key.ec, print_text, print_C);
+			break;
+		case BR_KEYTYPE_DLTHM:
+			if (verbose) {
+				fprintf(stderr, "Key type: Dilithium (security mode %d)\n",
+					pk->key.dilithium.mode);
+			}
+			print_dilithium(&pk->key.dilithium, print_text, print_C);
 			break;
 		default:
 			if (verbose) {

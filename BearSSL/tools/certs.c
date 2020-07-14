@@ -74,6 +74,14 @@ certificate_to_trust_anchor_inner(br_x509_trust_anchor *ta,
 		ta->pkey.key.ec.q = xblobdup(pk->key.ec.q, pk->key.ec.qlen);
 		ta->pkey.key.ec.qlen = pk->key.ec.qlen;
 		break;
+	case BR_KEYTYPE_DLTHM:
+		ta->pkey.key_type = BR_KEYTYPE_DLTHM;
+		ta->pkey.key.dilithium.mode = pk->key.dilithium.mode;
+		ta->pkey.key.dilithium.rho = xblobdup(pk->key.dilithium.rho, pk->key.dilithium.rholen);
+		ta->pkey.key.dilithium.rholen = pk->key.dilithium.rholen;
+		ta->pkey.key.dilithium.t1 = xblobdup(pk->key.dilithium.t1, pk->key.dilithium.t1len);
+		ta->pkey.key.dilithium.t1len = pk->key.dilithium.t1len;
+		break;
 	default:
 		fprintf(stderr, "ERROR: unsupported public key type in CA\n");
 		xfree(ta->dn.data);
@@ -107,6 +115,10 @@ free_ta_contents(br_x509_trust_anchor *ta)
 		break;
 	case BR_KEYTYPE_EC:
 		xfree(ta->pkey.key.ec.q);
+		break;
+	case BR_KEYTYPE_DLTHM:
+		xfree(ta->pkey.key.dilithium.rho);
+		xfree(ta->pkey.key.dilithium.t1);
 		break;
 	}
 }
