@@ -328,6 +328,12 @@ print_dilithium(const br_dilithium_private_key *sk,	outspec *os)
 	int r;
 	unsigned char kbuf_pub[BR_DILITHIUM_SECRET_BUFF_SIZE(BR_DILITHIUM_MAX_SECURITY_MODE)];
 	br_dilithium_public_key pk;
+	
+	if (br_dilithium_public_key_derivate_get_default()(sk, &pk, kbuf_pub) != 0) {
+		fprintf(stderr,
+			"ERROR: cannot derivate public key\n");
+		return 0;
+	}
 
 	if (os->print_text) {
 		printf("\nprivate key components :\n");
@@ -364,11 +370,6 @@ print_dilithium(const br_dilithium_private_key *sk,	outspec *os)
 		&& os->pk8der == NULL && os->pk8pem == NULL)
 	{
 		return 1;
-	}
-	if (br_dilithium_public_key_derivate_get_default()(sk, &pk, kbuf_pub) != 0) {
-		fprintf(stderr,
-			"ERROR: cannot derivate public key\n");
-		return 0;
 	}
 
 	r = 1;

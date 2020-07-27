@@ -76,7 +76,7 @@ main(int argc, char *argv[])
 
 		fprintf(stderr, "ERROR (decoding): err=%d\n", err);
 
-		return 0;
+		return 1;
 	}
 
 	ret = 0;

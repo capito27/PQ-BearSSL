@@ -161,7 +161,7 @@ verify_SKE_sig(br_ssl_client_context *ctx,
 		br_multihash_update(&mhc,
 			ctx->eng.ecdhe_point, ctx->eng.ecdhe_point_len);
 	} else { // For Dilithium signatures
-		head[0] = 3;
+		head[0] = 0x04;
 		head[1] = ctx->eng.kyber_ct_len >> 8;
 		head[2] = ctx->eng.kyber_ct_len & 0xFF;
 		br_multihash_update(&mhc, head, sizeof(head) - 1);
@@ -343,7 +343,7 @@ make_pms_kyber(br_ssl_client_context *ctx, int prf_id)
 	// Decrypt the ciphertext (an error will be returned on too large a ciphertext)
 	// An invalid but properly sized ciphertext will output a constant, pseudorandom secret
 	if (!ctx->eng.ikyber_dec(&ctx->eng.kyber_sk, server_ss, sizeof server_ss,
-							ctx->eng.kyber_ct, sizeof ctx->eng.kyber_ct)) {
+							ctx->eng.kyber_ct, ctx->eng.kyber_ct_len)) {
 		return -BR_ERR_LIMIT_EXCEEDED;
 	}
 
@@ -473,6 +473,16 @@ addr-ctx: hash_id
 	supported-hash-functions { num } drop 0
 	supports-rsa-sign? if num + then
 	supports-ecdsa? if num + then
+	supports-dilithium? if
+		num + 
+		\ If Sha-1 is enabled, we must remove 1 from the signature 
+		\ extension length, since it's an invalid Dilithium signature scheme
+		\ Sha-1 is stored as the third bit of the bit field returned by 
+		\ supported-hash-functions
+		supported-hash-functions drop 0x04 and if 
+			1 - 
+		then
+	then
 	dup if 1 << 6 + then ;
 
 \ Write supported hash functions ( sign -- )
@@ -484,11 +494,17 @@ addr-ctx: hash_id
 	\ Rationale:
 	\ -- SHA-256 and SHA-224 are more efficient on 32-bit architectures
 	\ -- SHA-1 is less than ideally collision-resistant
+	\ -- SHA-1 is not supported by Dilithium
 	dup 0x10 and if 4 write8 sign write8 then
 	dup 0x08 and if 3 write8 sign write8 then
 	dup 0x20 and if 5 write8 sign write8 then
 	dup 0x40 and if 6 write8 sign write8 then
-	0x04 and if 2 write8 sign write8 then ;
+
+	sign 4 = ifnot \ only if not Dilithium
+		0x04 and if 2 write8 sign write8 then 
+	else
+		drop
+	then ;
 
 \ Length of Supported Curves extension.
 : ext-supported-curves-length ( -- len )
@@ -635,6 +651,7 @@ cc: do-client-hello-KYBR-KEY-HELLO-KGN ( -- ) {
 			2 - write16             \ list length
 			supports-ecdsa? if 3 write-hashes then
 			supports-rsa-sign? if 1 write-hashes then
+			supports-dilithium? if 4 write-hashes then
 		then
 		\ TODO: add an API to specify preference order for curves.
 		\ Right now we send Curve25519 first, then other curves in
@@ -1128,10 +1145,11 @@ cc: get-client-chain ( auth_types -- ) {
 	read8 open-elt
 	begin dup while
 		read8 case
-			1  of 0x0000FF endof
-			64 of 0x00FF00 endof
-			65 of 0x010000 endof
-			66 of 0x020000 endof
+			1  of 0x000000FF endof
+			64 of 0x0000FF00 endof
+			65 of 0x00010000 endof
+			66 of 0x00020000 endof
+			99 of 0xFF000000 endof
 			0 swap
 		endcase
 		auth_types or >auth_types
@@ -1145,7 +1163,7 @@ cc: get-client-chain ( auth_types -- ) {
 	\ are supposed to provide forward secrecy, and static ECDH would
 	\ negate that property.
 	addr-cipher_suite get16 use-ecdh? ifnot
-		auth_types 0xFFFF and >auth_types
+		auth_types 0xFF00FFFF and >auth_types
 	then
 
 	\ Note: if the cipher suite is ECDH, then the X.509 validation
@@ -1167,7 +1185,7 @@ cc: get-client-chain ( auth_types -- ) {
 		\ Trim down the list depending on what hash functions
 		\ we support (since the hashing itself is done by the SSL
 		\ engine, not by the certificate handler).
-		supported-hash-functions drop dup 8 << or 0x030000 or and
+		supported-hash-functions drop dup dup 17 << or 8 << or 0x030000 or and
 
 		auth_types and
 		auth_types 0x030000 and if

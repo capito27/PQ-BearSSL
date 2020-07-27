@@ -104,7 +104,7 @@ uint32_t br_dilithium_third_party_vrfy(const br_dilithium_public_key *pk,
     br_shake_context sc;
 
     if (sig_len != BR_DILITHIUM_SIGNATURE_SIZE(pk->mode))
-        return -1;
+        return 0;
 
     // Map local polynomial vectors to local polynomial array
     mat_row.vec = tmp;
@@ -117,9 +117,9 @@ uint32_t br_dilithium_third_party_vrfy(const br_dilithium_public_key *pk,
 
     br_dilithium_third_party_unpack_pk(&t1, pk);
     if (br_dilithium_third_party_unpack_sig(&z, &h, &c, sig, pk->mode))
-        return -1;
+        return 0;
     if (br_dilithium_third_party_polyvec_chknorm(&z, BR_DILITHIUM_THIRD_PARTY_GAMMA1 - beta(pk->mode)))
-        return -1;
+        return 0;
 
     /* Compute CRH(CRH(rho, t1), msg) */
     br_shake_init(&sc, 256);
@@ -161,7 +161,7 @@ uint32_t br_dilithium_third_party_vrfy(const br_dilithium_public_key *pk,
     challenge(&cp, mu, sizeof mu, &w1);
     for (i = 0; i < sizeof(c.coeffs) / sizeof(c.coeffs[0]); ++i)
         if (c.coeffs[i] != cp.coeffs[i])
-            return -1;
+            return 0;
 
 #ifdef DILITHIUM_PRINT_VERIFY
     printf("///////////// VERIFY /////////////\n");
@@ -174,5 +174,5 @@ uint32_t br_dilithium_third_party_vrfy(const br_dilithium_public_key *pk,
     exit(-1);
 #endif
 
-    return 0;
+    return 1;
 }

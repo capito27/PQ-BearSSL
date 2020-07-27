@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 import binascii
+
 from pyasn1_modules import pem, rfc2459
 from pyasn1.codec.der import decoder, encoder
 from pyasn1.type.univ import Integer, OctetString, ObjectIdentifier, Null, Sequence, namedtype, BitString
 from hashlib import sha1, sha224, sha256, sha384, sha512
 import argparse
 import subprocess
+from os import path
 
 # Custom, non standard OID, for Dilithium signatures with sha.
 # This will insert itself into the 1.2.840.10045.4 OID structure  
@@ -49,7 +51,7 @@ DilithiumOIDKeyDict['id-dilithiumPublicKey'] = '1.2.840.10045.2.2'
 # Argument parsing
 ap = argparse.ArgumentParser()
 ap.add_argument("--cert", required=True, type=str,
-   help="Existing (PEM encoded) certificate to modify")
+   help="Existing (PEM or DER encoded) certificate to modify")
    
 ap.add_argument("--pub-key", required=True, type=str, 
    help="PEM file containing the DER Dilithium public key to insert into the certificate")
@@ -77,12 +79,22 @@ ap.add_argument("-o","--out-file", type=str,
 args = vars(ap.parse_args())
 
 # check that sign-algorithm is present if ca-priv-key-dilithium is true
-if args['ca_priv_key_dilithium'] and 'sign_algorithm' not in args:
+if args['ca_priv_key_dilithium'] and not args['sign_algorithm']:
     ap.error('The --ca-priv-key-dilithium argument requires --sign-algorithm')
 
 # Load the existing certificate
-cert_substrate = pem.readPemFromFile(open(args["cert"], 'r'))
+ftype = None
+f = open(args["cert"], 'rb')
+cert_substrate = None
+if f.read(27) == b'-----BEGIN CERTIFICATE-----' : # PEM handling
+    cert_substrate = pem.readPemFromFile(open(args["cert"], 'r'))
+    ftype = 0
+else: # DER default
+    f.seek(0)
+    cert_substrate = f.read()
+    ftype = 1
 cert = decoder.decode(cert_substrate, asn1Spec=rfc2459.Certificate())[0]
+f.close()
 
 # if ca-priv-key-dilithium is not true, we must check that the signing algorithm in place is known and uses a known hash function, otherwise, we can't do much
 if args['ca_priv_key_dilithium'] and str(cert["tbsCertificate"]["signature"]["algorithm"]) not in SignOIDToAlgo:
@@ -93,9 +105,18 @@ if args['ca_priv_key_dilithium'] and str(cert["tbsCertificate"]["signature"]["al
 if str(cert["tbsCertificate"]["signature"]["algorithm"]) in DilithiumSignAlgoToOID.values():
     args['ca_priv_key_dilithium'] = True
     # if the --sign-algorithm value is not present, set it to the current algorithm
-    if 'sign_algorithm' not in args:
+    if not args['sign_algorithm']:
         args['sign_algorithm'] = list(DilithiumSignAlgoToOID.keys())[list(DilithiumSignAlgoToOID.values()).index(str(cert["tbsCertificate"]["signature"]["algorithm"]))]
 
+# If we're supposed to sign with dilithium, check that the helper executable exists in the current directory
+if args['ca_priv_key_dilithium'] and not path.exists("DilithiumCertEditor_dilithium_sign"):
+    print("When attempting to sign with dilithium, could not locate the signing helper.")
+    print("It can be compiled as follows : ")
+    print("1. Build the BearSSL library")
+    print("2. Compile and link the helper binary with the following command : ")
+    print("gcc DilithiumCertEditor_dilithium_sign.c -Iinc/ -Lbuild/ -l:libbearssl.a -o DilithiumCertEditor_dilithium_sign")
+    print("NB : The command assumes the current directory to be the root of the BearSSL git structure.")
+    exit(-1)
 
 # change TBS signature algorithm if an algorithm is given
 if args['sign_algorithm']:
@@ -131,6 +152,12 @@ final_hash = hash.digest()
 cmd = ['openssl', 'pkeyutl', '-sign', '-inkey', args['ca_priv_key'], '-pkeyopt', f'digest:{hash.name}', '-pkeyopt', 'rsa_padding_mode:pkcs1']
 newSignature = b""
 if sigAlg == 0 : # Dilithium Signature > call to helper C program
+    # Load and decode the private key manually
+    dilithium_substrate = b''
+    for line in open(args['ca_priv_key'], 'r').readlines():
+        if not line.startswith('-'):
+            dilithium_substrate += line.rstrip().encode()
+
     # Open a pipe to send both the DER private key and the hash, as well as get back the signature without going through the filesystem
     # We send the key size through the first argument, so that the key can be distinguished from the data to be signed
     pipe = subprocess.Popen(['./DilithiumCertEditor_dilithium_sign', str(len(binascii.a2b_base64(dilithium_substrate)))], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -183,14 +210,20 @@ else :
     print("Something that shouldn't happen did happen, operation aborted")
 
 # save the final spliced certificate
-der_encoded = binascii.b2a_base64(encoder.encode(cert))
 
-pem_file = b'-----BEGIN CERTIFICATE-----'
-for i in range(0, len(der_encoded), 76):
-    pem_file += b'\n'+  der_encoded[i:i+76]
+output = b''
+if ftype == 0 : # PEM output
+    b64_cert = binascii.b2a_base64(encoder.encode(cert))
+    output = b'-----BEGIN CERTIFICATE-----'
+    for i in range(0, len(b64_cert), 76):
+        output += b'\n'+  b64_cert[i:i+76]
+    output += b'-----END CERTIFICATE-----\n' 
+    if not args['out_file']:
+        print(output.decode())
+else : # DER output
+    output = encoder.encode(cert)
+    if not args['out_file']:
+        print(output.decode('utf-8', 'ignore'))
 
-pem_file += b'-----END CERTIFICATE-----\n'
-
-if 'out_file' in args:
-    open(args['out_file'], 'wb').write(pem_file)
-print(pem_file.decode())
+if args['out_file']:
+    open(args['out_file'], 'wb').write(output)

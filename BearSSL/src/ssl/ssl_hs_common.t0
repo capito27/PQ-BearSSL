@@ -908,7 +908,7 @@ hexb| 0000 | \ List terminator.
 
 \ Test whether the cipher suite uses ECDH (static) key exchange.
 : use-ecdh? ( suite -- bool )
-	cipher-suite-to-elements 12 >> dup 2 > swap 5 < and  ;
+	cipher-suite-to-elements 12 >> dup 2 > swap 5 < and ;
 
 \ Test whether the cipher suite uses Kyber key exchange, signed with Dilithium.
 : use-kyber-dlthm? ( suite -- bool )
@@ -1218,9 +1218,9 @@ cc: compute-Finished-inner ( from_client prf_id -- ) {
 		read8 { hash } read8 { sign }
 
 		\ If hash is 0x08 then this is a "new algorithm" identifier,
-		\ and we set the corresponding bit if it is in the 0..15
+		\ and we set the corresponding bit if it is in the 0..11
 		\ range. Otherwise, we keep the value only if the signature
-		\ is either 1 (RSA) or 3 (ECDSA), and the hash is one of the
+		\ is either 1 (RSA), 3 (ECDSA) or 4 (DLTHM), and the hash is one of the
 		\ SHA-* functions (2 to 6). Note that we reject MD5.
 		hash 8 = if
 			sign 15 <= if
@@ -1232,6 +1232,19 @@ cc: compute-Finished-inner ( from_client prf_id -- ) {
 			and if
 				hashes 1 sign 1- 2 << hash + << or >hashes
 			then
+			
+			\ Sha1 is not authorised with Dilithium, as such, we fail if we encounter it
+			sign 4 = hash 2 = and if
+				ERR_INVALID_ALGORITHM fail
+			then
+
+			\ Insert Dilithium algortihms into the bit field
+			hash 3 >= hash 6 <= and
+			sign 4 =
+			and if
+				hashes 1 25 hash + << or >hashes  
+			then
+			
 		then
 	repeat
 	close-elt

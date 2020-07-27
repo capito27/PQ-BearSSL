@@ -272,6 +272,7 @@ coresrc=" \
 	src/ssl/prf_md5sha1.c \
 	src/ssl/prf_sha256.c \
 	src/ssl/prf_sha384.c \
+	src/ssl/ssl_ccert_single_dilithium.c \
 	src/ssl/ssl_ccert_single_ec.c \
 	src/ssl/ssl_ccert_single_rsa.c \
 	src/ssl/ssl_client.c \

@@ -484,7 +484,7 @@ verify_CV_sig(br_ssl_server_context *ctx, size_t sig_len)
 		{
 			return BR_ERR_BAD_SIGNATURE;
 		}
-	} else {
+	} else if (pk->key_type == BR_KEYTYPE_EC) {
 		if (ctx->eng.iecdsa == 0) {
 			return BR_ERR_BAD_SIGNATURE;
 		}
@@ -494,6 +494,17 @@ verify_CV_sig(br_ssl_server_context *ctx, size_t sig_len)
 		{
 			return BR_ERR_BAD_SIGNATURE;
 		}
+	} else {
+		if (ctx->eng.idilithium == 0) {
+			return BR_ERR_BAD_SIGNATURE;
+		}
+		if (!ctx->eng.idilithium(&pk->key.dilithium,
+			ctx->hash_CV, ctx->hash_CV_len,
+			ctx->eng.pad, sig_len))
+		{
+			return BR_ERR_BAD_SIGNATURE;
+		}
+
 	}
 	return 0;
 }
@@ -973,8 +984,9 @@ cc: save-session ( -- ) {
 	addr-hashes get32 and dup addr-hashes set32
 	\ In 'can-ecdhe', bit 12 is set if ECDHE_RSA is possible, bit 13 is
 	\ set if ECDHE_ECDSA is possible.
-	dup 0xFF and 0<> neg
+	dup dup 0xFF and 0<> neg
 	swap 8 >> 0<> 2 and or 12 << { can-ecdhe }
+	28 >> 0 <> { can-dlthm }
 
 	\ Filter supported curves. If there is no common curve between
 	\ client and us, then ECDHE suites cannot be used. Note that we
@@ -1001,13 +1013,21 @@ cc: save-session ( -- ) {
 	\ suites are filtered out. In particular:
 	\ -- ECDHE suites are removed if there is no common hash function
 	\    (for the relevant signature algorithm) or no common curve.
+	\ -- KYBER_DLTHM suites are removed if there is no common hash function.
 	\ -- TLS-1.2-only suites are removed if the negotiated version is
 	\    TLS-1.1 or lower.
 	addr-client_suites dup >css-off
 	begin dup css-max < while
 		dup get16 dup cipher-suite-to-elements
+		\ If ecdhe suite
 		dup 12 >> dup 1 = swap 2 = or if
 			dup can-ecdhe and ifnot
+				2drop 0 dup
+			then
+		then
+		\ If dilithium suite
+		dup 12 >> 5 = if
+			can-dlthm  ifnot
 				2drop 0 dup
 			then
 		then
@@ -1563,12 +1583,13 @@ cc: verify-CV-sig ( sig-len -- err ) {
 
 	\ With TLS 1.2+, there is an explicit hash + signature indication,
 	\ which must be compatible with the key type.
+	addr-cipher_suite get16 get-key-exchange-signature-type { sig-alg }
 	addr-version get16 0x0303 >= if
 		\ Get hash function, then signature algorithm. The
 		\ signature algorithm is 1 (RSA), 3 (ECDSA) or 4 (Dilithium) while our
-		\ symbolic constants for key types are 1 (RSA) or 2 (EC).
+		\ symbolic constants for key types are 1 (RSA), 2 (EC) or 3 (Dilithium).
 		read16
-		dup 0xFF and 1+ 1 >> key-type = ifnot
+		dup 0xFF and sig-alg = ifnot
 			ERR_BAD_SIGNATURE fail
 		then
 		8 >>
@@ -1585,7 +1606,7 @@ cc: verify-CV-sig ( sig-len -- err ) {
 
 	\ Read signature.
 	read16 dup { sig-len }
-	dup 512 > if ERR_LIMIT_EXCEEDED fail then
+	dup 3366 > if ERR_LIMIT_EXCEEDED fail then
 	addr-pad swap read-blob
 	sig-len verify-CV-sig
 	dup if fail then drop

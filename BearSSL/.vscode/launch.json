@@ -5,18 +5,39 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "--cert", 
+                "samples/cert-ee-ec.pem",
+                "--pub-key", 
+                "samples/key-ee-dilithium.pem",
+                "--pub-key-type", 
+                "id-dilithiumPublicKey", 
+                "--ca-priv-key", 
+                "samples/key-ica-ec.pem", 
+                "-o",
+                "samples/cert-ee-dilithium+ec2.pem"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "(gdb) Launch server",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/server_basic",
-            "args": ["8888"],
+            "args": [
+                "8888"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
             "presentation": {
-              "panel": "shared"
+                "panel": "shared"
             },
             "setupCommands": [
                 {
@@ -31,14 +52,118 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/client_basic",
-            "args": ["localhost", "8888"],
+            "args": [
+                "localhost",
+                "8888"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
             "presentation": {
-              "panel": "shared"
+                "panel": "shared"
+            },
+            "preLaunchTask": "Sleepdelay",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Launch tool (Server)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/brssl",
+            "args": [
+                "server",
+                "-cert",
+                "samples/cert-ee-dilithium.pem",
+                "-key",
+                "samples/key-ee-dilithium.pem",
+                "-CA",
+                "samples/cert-ica-ec.pem",
+                "-serverpref",
+                "-noreneg",
+                "-b",
+                "127.0.0.1",
+                "-p",
+                "4443"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "presentation": {
+                "panel": "shared"
+            },
+            "preLaunchTask": "Sleepdelay",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Launch tool (Client)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/brssl",
+            "args": [
+                "client",
+                "127.0.0.1:4443",
+                "-sni",
+                "localhost",
+                "-CA",
+                "samples/cert-ica-dilithium.pem",
+                "-cert",
+                "samples/cert-ee-dilithium+ec.pem",
+                "-key",
+                "samples/key-ee-dilithium.pem",
+                "-nostaticecdh",
+                "-noreneg"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "presentation": {
+                "panel": "shared"
+            },
+            "preLaunchTask": "Sleepdelay",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Launch tool (other)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/brssl",
+            "args": [
+                "skey",
+                "-gen",
+                "dilithium",
+                "-C"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "presentation": {
+                "panel": "shared"
             },
             "preLaunchTask": "Sleepdelay",
             "setupCommands": [
@@ -52,8 +177,11 @@
     ],
     "compounds": [
         {
-          "name": "(gdb) both",
-          "configurations": ["(gdb) Launch server", "(gdb) Launch client"]
+            "name": "(gdb) both",
+            "configurations": [
+                "(gdb) Launch server",
+                "(gdb) Launch client"
+            ]
         }
-      ]
+    ]
 }

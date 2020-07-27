@@ -1342,6 +1342,12 @@ test_speed_dilithium_inner(char *name,
             break;
 #endif
         }
+#ifdef DILITHIUM_TESTING_SIGN
+        break;
+#endif
+#ifdef DILITHIUM_TESTING_VERIFY
+        break;
+#endif
         end = clock();
         tt = (double) (end - begin) / CLOCKS_PER_SEC;
         if (tt >= 10.0) {
@@ -1351,12 +1357,6 @@ test_speed_dilithium_inner(char *name,
             break;
         }
         num <<= 1;
-#ifdef DILITHIUM_TESTING_SIGN
-        break;
-#endif
-#ifdef DILITHIUM_TESTING_VERIFY
-        break;
-#endif
     }
 
     memset(sig, 'R', sizeof sig);

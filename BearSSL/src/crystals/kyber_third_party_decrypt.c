@@ -85,7 +85,7 @@ uint32_t br_kyber_third_party_decrypt(const br_kyber_private_key *sk,
 
     // Constant time equality check
     for (i = 0; i < BR_KYBER_CIPHERTEXT_SIZE(sk->polynbr) / 4; i++) {
-        eq = EQ(eq, EQ(*((uint32_t * )(cmp + 4 * i)), *((uint32_t * )(ct + 4 * i))));
+        eq &= EQ(*((uint32_t * )(cmp + 4 * i)), *((uint32_t * )(ct + 4 * i)));
     }
 
     // Overwrite coins with hash of ciphertext

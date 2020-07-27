@@ -531,8 +531,8 @@ static const struct {
 		(const void *(*)(void))&br_ec_p256_m62_get },
 	{ "ec_p256_m64",          "m64",
 		(const void *(*)(void))&br_ec_p256_m64_get },
-	{ "dilithium_third_party","tp",
-		(const void *(*)(void))&br_dilithium_third_party_keygen },
+	{ "dilithium_third_party_vrfy","tp",
+		(const void *(*)(void))&br_dilithium_third_party_vrfy },
 	{ "kyber_third_party",    "tp",
 		(const void *(*)(void))&br_kyber_third_party_keygen },
 	{ 0, 0, 0, }

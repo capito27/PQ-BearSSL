@@ -57,9 +57,11 @@ uint32_t br_dilithium_third_party_keygen(const br_prng_class **rng_ctx,
     eta = mode <= 3 ? 8 - mode : 3;
 
     // Map the private and public buffers to the respective key regions
-    buff_to_key(pk->rho, kbuf_pub, 32);
-    buff_to_key(pk->t1, kbuf_pub, (mode + 2) * 288);
-    pk->mode = mode;
+    if(pk){
+        buff_to_key(pk->rho, kbuf_pub, 32);
+        buff_to_key(pk->t1, kbuf_pub, (mode + 2) * 288);
+        pk->mode = mode;
+    }
 
     buff_to_key(sk->rho, kbuf_priv, 32);
     buff_to_key(sk->key, kbuf_priv, 32);
@@ -119,13 +121,26 @@ uint32_t br_dilithium_third_party_keygen(const br_prng_class **rng_ctx,
     // Extract t1 and store public key
     br_dilithium_third_party_polyvec_freeze(&t1);
     br_dilithium_third_party_polyvec_power2round(&t1, &t0, &t1);
-    br_dilithium_third_party_pack_pk(pk, &t1);
-    memcpy(pk->rho, tmp, pk->rholen);
+    if (pk) {
+        br_dilithium_third_party_pack_pk(pk, &t1);
+        memcpy(pk->rho, tmp, pk->rholen);
+    } else {
+        // Temporarly pack t1 into the t0 buffer of the secret key, 
+        // to allow it to be used in the CRH computation (the t0 buffer is always larger than t1)
+        for (i = 0; i < t1.polylen; ++i)
+            br_dilithium_third_party_polyt1_pack(sk->t0 + i * 288, &t1.vec[i]);
+        sk->t0len = t1.polylen * 288;
+    }
 
     // Compute CRH(rho, t1) and store the secret key
     br_shake_init(&sc, 256);
-    br_shake_inject(&sc, pk->rho, pk->rholen);
-    br_shake_inject(&sc, pk->t1, pk->t1len);
+    br_shake_inject(&sc, tmp, sk->rholen);
+
+    if (pk) { // If there is no output public key, then the packed t1 is in t0
+        br_shake_inject(&sc, pk->t1, pk->t1len);
+    } else {
+        br_shake_inject(&sc, sk->t0, sk->t0len);
+    }
     br_shake_flip(&sc, 0);
     br_shake_produce(&sc, sk->tr, sk->trlen);
 
@@ -136,10 +151,12 @@ uint32_t br_dilithium_third_party_keygen(const br_prng_class **rng_ctx,
 #ifdef DILITHIUM_PRINT_KEYGEN
     printf("///////////// KEYGEN /////////////\n");
     // Print the full memory contents of the private and public key elements for manual comparison
-    printf("public key : rho (%ld bytes):\n", pk->rholen);
-    print_hex_memory(pk->rho, pk->rholen);
-    printf("public key : t1 (%ld bytes):\n", pk->t1len);
-    print_hex_memory(pk->t1, pk->t1len);
+    if(pk){
+        printf("public key : rho (%ld bytes):\n", pk->rholen);
+        print_hex_memory(pk->rho, pk->rholen);
+        printf("public key : t1 (%ld bytes):\n", pk->t1len);
+        print_hex_memory(pk->t1, pk->t1len);
+    }
 
     printf("private key : rho (%ld bytes):\n", sk->rholen);
     print_hex_memory(sk->rho, sk->rholen);

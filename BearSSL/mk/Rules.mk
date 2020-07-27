@@ -224,6 +224,7 @@ OBJ = \
  $(OBJDIR)$Pprf_md5sha1$O \
  $(OBJDIR)$Pprf_sha256$O \
  $(OBJDIR)$Pprf_sha384$O \
+ $(OBJDIR)$Pssl_ccert_single_dilithium$O \
  $(OBJDIR)$Pssl_ccert_single_ec$O \
  $(OBJDIR)$Pssl_ccert_single_rsa$O \
  $(OBJDIR)$Pssl_client$O \
@@ -1074,6 +1075,9 @@ $(OBJDIR)$Pprf_sha256$O: src$Pssl$Pprf_sha256.c $(HEADERSPRIV)
 
 $(OBJDIR)$Pprf_sha384$O: src$Pssl$Pprf_sha384.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pprf_sha384$O src$Pssl$Pprf_sha384.c
+
+$(OBJDIR)$Pssl_ccert_single_dilithium$O: src$Pssl$Pssl_ccert_single_dilithium.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_ccert_single_dilithium$O src$Pssl$Pssl_ccert_single_dilithium.c
 
 $(OBJDIR)$Pssl_ccert_single_ec$O: src$Pssl$Pssl_ccert_single_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_ccert_single_ec$O src$Pssl$Pssl_ccert_single_ec.c

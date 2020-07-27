@@ -22,8 +22,7 @@ extern "C" {
  * Dilithium public keys consist of a vector of polynomials of degree 255,
  * as well a seed to generate a pseudo-random rectangular polynomial matrix.
  *
- * Dilithium private keys contain a copy of the public key for convenience, as well as
- * two secret vectors sampled upon the pseudo-random matrix, a secret key
+ * Dilithium private keys contain a copy of the seed, 
  *
  * Such seeds are represented with a 32-byte unsigned char buffer.
  *

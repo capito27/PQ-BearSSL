@@ -78,21 +78,27 @@ static size_t
 se_do_sign(const br_ssl_server_policy_class **pctx,
 	unsigned algo_id, unsigned char *data, size_t hv_len, size_t len)
 {
+	br_hmac_drbg_context rng;
+	br_prng_seeder seeder;
 	br_ssl_server_policy_dilithium_context *pc;
 	unsigned char hv[64];
-	const br_hash_class *hc;
 
 	algo_id &= 0xFF;
 	pc = (br_ssl_server_policy_dilithium_context *)pctx;
-	hc = br_multihash_getimpl(pc->mhash, algo_id);
-	if (hc == NULL) {
-		return 0;
-	}
 	memcpy(hv, data, hv_len);
 	if (len < BR_DILITHIUM_SIGNATURE_SIZE(pc->sk->mode)) {
 		return 0;
 	}
-	return pc->idilithium(pc->rnd, pc->sk, data, len, hv, hv_len);
+	// Seed the drbg
+	seeder = br_prng_seeder_system(NULL);
+	if (seeder == 0) {
+		return 0;
+	}
+	br_hmac_drbg_init(&rng, &br_sha256_vtable, NULL, 0);
+	if (!seeder(&rng.vtable)) {
+		return 0;
+	}
+	return pc->idilithium(&rng.vtable, pc->sk, data, len, hv, hv_len);
 }
 
 static const br_ssl_server_policy_class se_policy_vtable = {
@@ -106,8 +112,7 @@ static const br_ssl_server_policy_class se_policy_vtable = {
 void
 br_ssl_server_set_single_dilithium(br_ssl_server_context *cc,
 	const br_x509_certificate *chain, size_t chain_len,
-	const br_dilithium_private_key *sk, br_dilithium_sign idilithium, 
-	const br_prng_class **rnd)
+	const br_dilithium_private_key *sk, br_dilithium_sign idilithium)
 {
 	cc->chain_handler.single_dilithium.vtable = &se_policy_vtable;
 	cc->chain_handler.single_dilithium.chain = chain;
@@ -115,6 +120,5 @@ br_ssl_server_set_single_dilithium(br_ssl_server_context *cc,
 	cc->chain_handler.single_dilithium.sk = sk;
 	cc->chain_handler.single_dilithium.mhash = &cc->eng.mhash;
 	cc->chain_handler.single_dilithium.idilithium = idilithium;
-	cc->chain_handler.single_dilithium.rnd = rnd;
 	cc->policy_vtable = &cc->chain_handler.single_dilithium.vtable;
 }

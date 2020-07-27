@@ -68,10 +68,10 @@
 
 #if !(SERVER_RSA || SERVER_EC || SERVER_MIXED_RSA_EC || SERVER_MIXED_EC_DILITHIUM || SERVER_DILIHIUM)
 #define SERVER_RSA                 0
-#define SERVER_EC                  1
+#define SERVER_EC                  0
 #define SERVER_MIXED_RSA_EC        0
 #define SERVER_MIXED_EC_DILITHIUM  0
-#define SERVER_DILITHIUM           0
+#define SERVER_DILITHIUM           1
 #endif
 
 #if SERVER_RSA

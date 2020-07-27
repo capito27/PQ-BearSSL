@@ -20,7 +20,22 @@
             "label": "Build bearssl",
             "dependsOn": ["Build bearssl T0"],
             "command": "/usr/bin/make",
-            "args": ["lib","-j8", "CFLAGS='-g'"],
+            "args": ["lib","-j8", "CFLAGS='-g -DPRINT_PMS'"],
+            "options": {
+              "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$gcc"],
+            "group": "build",
+            "presentation": {
+              "panel": "shared"
+          }
+        },
+        {
+            "type": "shell",
+            "label": "Build tools",
+            "dependsOn": ["Build bearssl"],
+            "command": "/usr/bin/make",
+            "args": ["tools","-j8", "CFLAGS='-g'"],
             "options": {
               "cwd": "${workspaceFolder}"
             },
@@ -64,7 +79,7 @@
         },
         {
             "label": "BuildAll",
-            "dependsOn": ["Build client", "Build server"],
+            "dependsOn": ["Build client", "Build server", "Build tools"],
             "group": {
                 "kind" :"build",
                 "isDefault": true

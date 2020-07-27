@@ -530,9 +530,6 @@ void br_x509_knownkey_init_ec(br_x509_knownkey_context *ctx,
 /**
  * \brief Initialize a "known key" X.509 engine with a known Dilithium public key.
  *
- * The `usages` parameter is ommited, since the only usage for a Dilithium key is,
- * `BR_KEYTYPE_SIGN`.
- *
  * The provided pointers are linked in, not copied, so they must remain
  * valid while the public key may be in usage.
  *

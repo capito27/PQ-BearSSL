@@ -23,6 +23,7 @@
  */
 
 #include "inner.h"
+#include "assert.h"
 
 static void
 cc_none0(const br_ssl_client_certificate_class **pctx)
@@ -54,9 +55,11 @@ cc_choose(const br_ssl_client_certificate_class **pctx,
 	br_ssl_client_certificate_dilithium_context *zc;
 	int x;
 
+	(void)cc;
+
 	zc = (br_ssl_client_certificate_dilithium_context *)pctx;
 
-	x = br_ssl_choose_hash((unsigned)(auth_types >> 8));
+	x = br_ssl_choose_hash((unsigned)(auth_types >> 25));
 	if (x == 0) {
 		memset(choices, 0, sizeof *choices);
 		return;
@@ -71,40 +74,45 @@ static uint32_t
 cc_do_keyx(const br_ssl_client_certificate_class **pctx,
 	unsigned char *data, size_t *len)
 {
-	br_ssl_client_certificate_ec_context *zc;
-	uint32_t r;
-	size_t xoff, xlen;
-
-	zc = (br_ssl_client_certificate_ec_context *)pctx;
-	r = zc->iec->mul(data, *len, zc->sk->x, zc->sk->xlen, zc->sk->curve);
-	xoff = zc->iec->xoff(zc->sk->curve, &xlen);
-	memmove(data, data + xoff, xlen);
-	*len = xlen;
-	return r;
+	// Since Dilithium key are not used for key exchanges, only for signatures,
+	// We abort
+	(void)pctx;
+	(void)data;
+	(void)len;
+	assert(0);
 }
 
 static size_t
 cc_do_sign(const br_ssl_client_certificate_class **pctx,
 	int hash_id, size_t hv_len, unsigned char *data, size_t len)
 {
-	br_ssl_client_certificate_ec_context *zc;
+	br_ssl_client_certificate_dilithium_context *zc;
 	unsigned char hv[64];
-	const br_hash_class *hc;
+	br_hmac_drbg_context rng;
+	br_prng_seeder seeder;
+	
+	(void)hash_id;
 
-	zc = (br_ssl_client_certificate_ec_context *)pctx;
+	zc = (br_ssl_client_certificate_dilithium_context *)pctx;
 	memcpy(hv, data, hv_len);
-	hc = br_multihash_getimpl(zc->mhash, hash_id);
-	if (hc == NULL) {
+
+	if (len < BR_DILITHIUM_SIGNATURE_SIZE(zc->sk->mode)) {
 		return 0;
 	}
-	if (len < 139) {
+	// Seed the drbg
+	seeder = br_prng_seeder_system(NULL);
+	if (seeder == 0) {
 		return 0;
 	}
-	return zc->iecdsa(zc->iec, hc, hv, zc->sk, data);
+	br_hmac_drbg_init(&rng, &br_sha256_vtable, NULL, 0);
+	if (!seeder(&rng.vtable)) {
+		return 0;
+	}
+	return zc->idilithium(&rng.vtable, zc->sk, data, len, hv, hv_len);
 }
 
 static const br_ssl_client_certificate_class ccert_vtable = {
-	sizeof(br_ssl_client_certificate_ec_context),
+	sizeof(br_ssl_client_certificate_dilithium_context),
 	cc_none0, /* start_name_list */
 	cc_none1, /* start_name */
 	cc_none2, /* append_name */
@@ -119,18 +127,15 @@ static const br_ssl_client_certificate_class ccert_vtable = {
 void
 br_ssl_client_set_single_dilithium(br_ssl_client_context *cc,
 	const br_x509_certificate *chain, size_t chain_len,
-	const br_ec_private_key *sk, unsigned allowed_usages,
-	unsigned cert_issuer_key_type,
-	const br_ec_impl *iec, br_ecdsa_sign iecdsa)
+	const br_dilithium_private_key *sk,
+	unsigned cert_issuer_key_type, br_dilithium_sign idilithium)
 {
-	cc->client_auth.single_ec.vtable = &ccert_vtable;
-	cc->client_auth.single_ec.chain = chain;
-	cc->client_auth.single_ec.chain_len = chain_len;
-	cc->client_auth.single_ec.sk = sk;
-	cc->client_auth.single_ec.allowed_usages = allowed_usages;
-	cc->client_auth.single_ec.issuer_key_type = cert_issuer_key_type;
-	cc->client_auth.single_ec.mhash = &cc->eng.mhash;
-	cc->client_auth.single_ec.iec = iec;
-	cc->client_auth.single_ec.iecdsa = iecdsa;
-	cc->client_auth_vtable = &cc->client_auth.single_ec.vtable;
+	cc->client_auth.single_dilithium.vtable = &ccert_vtable;
+	cc->client_auth.single_dilithium.chain = chain;
+	cc->client_auth.single_dilithium.chain_len = chain_len;
+	cc->client_auth.single_dilithium.sk = sk;
+	cc->client_auth.single_dilithium.issuer_key_type = cert_issuer_key_type;
+	cc->client_auth.single_dilithium.mhash = &cc->eng.mhash;
+	cc->client_auth.single_dilithium.idilithium = idilithium;
+	cc->client_auth_vtable = &cc->client_auth.single_dilithium.vtable;
 }

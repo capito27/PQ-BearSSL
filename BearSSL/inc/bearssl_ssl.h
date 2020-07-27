@@ -1803,20 +1803,31 @@ br_ssl_engine_get_ecdsa(br_ssl_engine_context *cc)
  *
  * On the client and server, this is used to perform a quantum-resistant
  * 3-message key exchange
+ * 
+ * Note that the polynomials argument works differently for client and server.
+ * 
+ * In the client, it defines how many Kyber polynomials to use for the key exchange
+ * 
+ * In the server, it defines what the minimal polynomial amount to support is.
  *
  *
  * \param cc       client context.
  * \param ikyber_dec   Kyber decryption implmentaion.
  * \param ikyber_enc   Kyber encryption implmentaion.
  * \param ikyber_kgn   Kyber key generation implmentaion.
+ * \param polynomials   Amount of Kyber polynomials to use for key exchange
+ * 					   valid between 2 and 4
  */
 static inline void
 br_ssl_engine_set_kyber(br_ssl_engine_context *cc, br_kyber_decrypt ikyber_dec,
-                        br_kyber_encrypt ikyber_enc, br_kyber_keygen ikyber_kgn)
+                        br_kyber_encrypt ikyber_enc, br_kyber_keygen ikyber_kgn, 
+						int polynomials)
 {
    cc->ikyber_dec = ikyber_dec;
    cc->ikyber_enc = ikyber_enc;
    cc->ikyber_kgn = ikyber_kgn;
+   cc->kyber_poly_count = polynomials;
+   cc->use_kyber = 1;
 }
 
 /**
@@ -2835,12 +2846,12 @@ struct br_ssl_client_context_ {
  *     is set.
  *
  *   - If DILITHIUM is supported with hash function of ID `x`, then bit
- *     `24+x` is set.
+ *     `25+x` is set. (only algorithms with ID 3 to 6 are supported)
  *
  *   - Newer algorithms are symbolic 16-bit identifiers that do not
  *     represent signature algorithm and hash function separately. If
- *     the TLS-level identifier is `0x0800+x` for a `x` in the 0..15
- *     range, then bit `16+x` is set.
+ *     the TLS-level identifier is `0x0800+x` for a `x` in the 0..11
+ *     range, then bit `16+x` is set. 
  *
  * "New algorithms" are currently defined only in draft documents, so
  * this support is subject to possible change. Right now (early 2017),
@@ -3116,15 +3127,14 @@ void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
  * \param cc                     server context.
  * \param chain                  server certificate chain to send.
  * \param chain_len              chain length (number of certificates).
- * \param sk                     server private key (EC).
+ * \param sk                     server private key (Dilithium).
  * \param cert_issuer_key_type   issuing CA's key type.
- * \param iec                    EC core implementation.
- * \param iecdsa                 ECDSA signature implementation ("asn1" format).
+ * \param iecdsa                 Dilithium signature implementation.
  */
 void br_ssl_client_set_single_dilithium(br_ssl_client_context *cc,
                                         const br_x509_certificate *chain, size_t chain_len,
-                                        const br_dilithium_private_key *sk, unsigned cert_issuer_key_type
-                                        , br_dilithium_sign idilithium);
+                                        const br_dilithium_private_key *sk, unsigned cert_issuer_key_type,
+										br_dilithium_sign idilithium);
 
 /**
  * \brief Type for a "translated cipher suite", as an array of two
@@ -3505,7 +3515,6 @@ typedef struct {
 	const br_dilithium_private_key *sk;
 	const br_multihash_context *mhash;
 	br_dilithium_sign idilithium;
-	const br_prng_class **rnd;
 #endif
 } br_ssl_server_policy_dilithium_context;
 
@@ -3652,8 +3661,9 @@ struct br_ssl_server_context_ {
 	/*
 	 * Hash functions supported by the client, with ECDSA and RSA
 	 * (bit mask). For hash function with id 'x', set bit index is
-	 * x for RSA, x+8 for ECDSA. For newer algorithms, with ID
-	 * 0x08**, bit 16+k is set for algorithm 0x0800+k.
+	 * x for RSA, x+8 for ECDSA, x+32 for Dilithium. 
+	 * For newer algorithms, with ID 0x08**, bit 16+k is set for 
+	 * algorithm 0x0800+k.
 	 */
 	uint32_t hashes;
 
@@ -3778,7 +3788,6 @@ void br_ssl_server_init_full_ec(br_ssl_server_context *cc,
 	unsigned cert_issuer_key_type, const br_ec_private_key *sk);
 
 /**
- *  TODO FIX TEXT
  * \brief SSL server profile: full_dilithium.
  *
  * This function initialises the provided SSL server context with
@@ -4098,8 +4107,7 @@ void br_ssl_server_set_single_ec(br_ssl_server_context *cc,
  */
 void br_ssl_server_set_single_dilithium(br_ssl_server_context *cc,
 	const br_x509_certificate *chain, size_t chain_len,
-	const br_dilithium_private_key *sk, br_dilithium_sign idilithium,
-	const br_prng_class **rnd);
+	const br_dilithium_private_key *sk, br_dilithium_sign idilithium);
 
 /**
  * \brief Activate client certificate authentication.

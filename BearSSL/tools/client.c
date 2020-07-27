@@ -146,7 +146,6 @@ typedef struct {
 	size_t chain_len;
 	private_key *sk;
 	int issuer_key_type;
-	const br_prng_class **rnd;
 } ccert_context;
 
 static void
@@ -269,8 +268,13 @@ cc_choose(const br_ssl_client_certificate_class **pctx,
 			fprintf(stderr, "\n");
 		}
 		if ((auth_types & 0xFF00) != 0) {
-			fprintf(stderr, "supported: ECDSA and/or Dilithium signatures:");
+			fprintf(stderr, "supported: ECDSA signatures:");
 			print_hashes(auth_types >> 8, hashes >> 8);
+			fprintf(stderr, "\n");
+		}
+		if ((auth_types >> 25) != 0) {
+			fprintf(stderr, "supported: Dilithium signatures:");
+			print_hashes(auth_types >> 25, hashes >> 25);
 			fprintf(stderr, "\n");
 		}
 		if ((auth_types & 0x010000) != 0) {
@@ -287,6 +291,7 @@ cc_choose(const br_ssl_client_certificate_class **pctx,
 		} else {
 			fprintf(stderr, "server key is not EC\n");
 		}
+		
 	}
 	switch (zc->sk->key_type) {
 	case BR_KEYTYPE_RSA:
@@ -387,6 +392,8 @@ cc_do_sign(const br_ssl_client_certificate_class **pctx,
 		const unsigned char *hash_oid;
 		uint32_t x;
 		size_t sig_len;
+		br_hmac_drbg_context rng;
+		br_prng_seeder seeder;
 
 	case BR_KEYTYPE_RSA:
 		hash_oid = get_hash_oid(hash_id);
@@ -466,8 +473,19 @@ cc_do_sign(const br_ssl_client_certificate_class **pctx,
 			}
 			return 0;
 		}
+		// Seed the drbg
+		seeder = br_prng_seeder_system(NULL);
+		if (seeder == 0) {
+			fprintf(stderr, "ERROR: no system source of randomness\n");
+			return 0;
+		}
+		br_hmac_drbg_init(&rng, &br_sha256_vtable, NULL, 0);
+		if (!seeder(&rng.vtable)) {
+			fprintf(stderr, "ERROR: system source of randomness failed\n");
+			return 0;
+		}
 		sig_len = br_dilithium_sign_get_default()(
-			zc->rnd, &zc->sk->key.dilithium, hv, hv_len, data, len);
+			&rng.vtable, &zc->sk->key.dilithium, data, len, hv, hv_len);
 		if (sig_len == 0) {
 			if (zc->verbose) {
 				fprintf(stderr, "ERROR: Dilithium-sign failure\n");

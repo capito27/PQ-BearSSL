@@ -376,6 +376,11 @@ sp_choose(const br_ssl_server_policy_class **pctx,
 			print_hashes(chashes >> 8);
 			fprintf(stderr, "\n");
 		}
+		if ((chashes >> 25) != 0) {
+			fprintf(stderr, "      with Dilithium:");
+			print_hashes(chashes >> 25);
+			fprintf(stderr, "\n");
+		}
 	}
 	for (u = 0; u < st_num; u ++) {
 		unsigned tt;
@@ -456,6 +461,29 @@ sp_choose(const br_ssl_server_policy_class **pctx,
 				goto choose_ok;
 			}
 			break;
+		case BR_SSLKEYX_KYBR_DLTHM:
+			if (pc->sk->key_type == BR_KEYTYPE_DLTHM) {
+				choices->cipher_suite = st[u][0];
+				if (br_ssl_engine_get_version(&cc->eng)
+					< BR_TLS12)
+				{
+					// Don't support under TLS1.2
+					return 0;
+				} else {
+					unsigned id;
+
+					id = choose_hash(chashes >> 25); // Dilithium hashes are shifted by 25
+					if (pc->cbhash) {
+						choices->algo_id =
+							(id << 8) + 0x03;
+					} else {
+						choices->algo_id =
+							0xFF00 + id;
+					}
+				}
+				goto choose_ok;
+			}
+			break;
 		}
 	}
 	return 0;
@@ -496,6 +524,9 @@ sp_do_keyx(const br_ssl_server_policy_class **pctx,
 		memmove(data, data + xoff, xlen);
 		*len = xlen;
 		return r;
+	case BR_KEYTYPE_DLTHM:
+		fprintf(stderr, "ERROR: Dilithium key type can't be used for key exchanges\n");
+		return 0;
 	default:
 		fprintf(stderr, "ERROR: unknown private key type (%d)\n",
 			(int)pc->sk->key_type);
@@ -544,6 +575,8 @@ sp_do_sign(const br_ssl_server_policy_class **pctx,
 		uint32_t x;
 		const unsigned char *hash_oid;
 		const br_hash_class *hc;
+		br_hmac_drbg_context rng;
+		br_prng_seeder seeder;
 
 	case BR_KEYTYPE_RSA:
 		hash_oid = get_hash_oid(algo_id);
@@ -599,6 +632,44 @@ sp_do_sign(const br_ssl_server_policy_class **pctx,
 		if (sig_len == 0) {
 			if (pc->verbose) {
 				fprintf(stderr, "ERROR: ECDSA-sign failure\n");
+			}
+			return 0;
+		}
+		return sig_len;
+	
+	case BR_KEYTYPE_DLTHM:
+		hc = get_hash_impl(algo_id);
+		if (hc == NULL) {
+			if (pc->verbose) {
+				fprintf(stderr, "ERROR: cannot Dilithium-sign with"
+					" unknown hash function: %u\n",
+					algo_id);
+			}
+			return 0;
+		}
+		if (len < BR_DILITHIUM_SIGNATURE_SIZE(pc->sk->key.dilithium.mode)) {
+			if (pc->verbose) {
+				fprintf(stderr, "ERROR: cannot Dilithium-sign"
+					" (output buffer = %lu)\n",
+					(unsigned long)len);
+			}
+			return 0;
+		}
+		// Seed the drbg
+		seeder = br_prng_seeder_system(NULL);
+		if (seeder == 0) {
+			fprintf(stderr, "ERROR: no system source of randomness\n");
+			return 0;
+		}
+		br_hmac_drbg_init(&rng, &br_sha256_vtable, NULL, 0);
+		if (!seeder(&rng.vtable)) {
+			fprintf(stderr, "ERROR: system source of randomness failed\n");
+			return 0;
+		}
+		sig_len = br_dilithium_sign_get_default()(&rng.vtable, &pc->sk->key.dilithium, data, len, hv, hv_len);
+		if (sig_len == 0) {
+			if (pc->verbose) {
+				fprintf(stderr, "ERROR: Dilithium-sign failure\n");
 			}
 			return 0;
 		}
@@ -973,6 +1044,8 @@ do_server(int argc, char *argv[])
 			goto server_exit_error;
 		}
 		break;
+	case BR_KEYTYPE_DLTHM:
+		break;
 	default:
 		fprintf(stderr, "ERROR: unsupported private key type (%d)\n",
 			sk->key_type);
@@ -988,6 +1061,7 @@ do_server(int argc, char *argv[])
 		switch (cert_signer_algo) {
 		case BR_KEYTYPE_RSA: csas = "RSA"; break;
 		case BR_KEYTYPE_EC:  csas = "EC"; break;
+		case BR_KEYTYPE_DLTHM:  csas = "Dilithium"; break;
 		default:
 			csas = "unknown";
 			break;
@@ -1073,6 +1147,9 @@ do_server(int argc, char *argv[])
 		if ((req & (REQ_ECDHE_RSA | REQ_ECDHE_ECDSA)) != 0) {
 			br_ssl_engine_set_default_ec(&cc.eng);
 		}
+		if ((req & (REQ_KYBER_DLTHM)) != 0) {
+			br_ssl_engine_set_default_kyber(&cc.eng);
+		}
 	}
 	br_ssl_engine_set_suites(&cc.eng, suite_ids, num_suites);
 
@@ -1146,9 +1223,12 @@ do_server(int argc, char *argv[])
 		}
 		br_ssl_engine_set_default_rsavrfy(&cc.eng);
 		br_ssl_engine_set_default_ecdsa(&cc.eng);
+		br_ssl_engine_set_default_dilithium(&cc.eng);
 		br_x509_minimal_set_rsa(&xc, br_rsa_pkcs1_vrfy_get_default());
 		br_x509_minimal_set_ecdsa(&xc,
 			br_ec_get_default(), br_ecdsa_vrfy_asn1_get_default());
+		br_x509_minimal_set_dilithium(&xc, 
+			br_dilithium_vrfy_get_default());
 		br_ssl_engine_set_x509(&cc.eng, &xc.vtable);
 		br_ssl_server_set_trust_anchor_names_alt(&cc,
 			&VEC_ELT(anchors, 0), VEC_LEN(anchors));
