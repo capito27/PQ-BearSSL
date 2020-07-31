@@ -1178,7 +1178,6 @@ cc: do-kyber-kex-part1 ( -- len ) {
 		\ are supported both by us and the peer. Right now, we apply
 		\ a fixed preference order: Curve25519, P-256, P-384, P-521,
 		\ then the common curve with the lowest ID.
-		\ (TODO: add some option to make that behaviour configurable.)
 		\
 		\ This loop always terminates because previous processing made
 		\ sure that ECDHE suites are not selectable if there is no common

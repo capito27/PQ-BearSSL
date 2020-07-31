@@ -1,8 +1,29 @@
 #ifndef PARAMS_H
 #define PARAMS_H
 
+///////////// TESTING ///////////////
+
+// This define can be used to force a security level
+#define KYBER_K 4
+
+// These define will stop the program after their specific function as well as force the RNG output to the define below
+//#define KYBER_TESTING_KEYGEN
+//#define KYBER_TESTING_ENC
+#define KYBER_TESTING_DEC
+
+// This define sets the RNG to always simulate the return of the following byte
+#define KYBER_RNG_OUTPUT_FORCE 0x66
+
+// These define will print the contents of the relevant data
+#define KYBER_PRINT_KEYGEN
+#define KYBER_PRINT_ENC
+#define KYBER_PRINT_DEC
+
+///////////// TESTING ///////////////
+
+
 #ifndef KYBER_K
-#define KYBER_K 3	/* Change this for different security strengths */
+#define KYBER_K 2	/* Change this for different security strengths */
 #endif
 
 //#define KYBER_90S	/* Uncomment this if you want the 90S variant */

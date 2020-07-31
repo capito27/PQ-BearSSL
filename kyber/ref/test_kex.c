@@ -24,12 +24,18 @@ int main(void)
   unsigned char ka[KEX_SSBYTES];
   unsigned char kb[KEX_SSBYTES];
   unsigned char zero[KEX_SSBYTES];
+  unsigned char ss[CRYPTO_BYTES];
+  unsigned char ct[CRYPTO_CIPHERTEXTBYTES];
   int i;
 
   for(i=0;i<KEX_SSBYTES;i++)
     zero[i] = 0;
 
   crypto_kem_keypair(pkb, skb); // Generate static key for Bob
+  
+  crypto_kem_enc(ct, ss, pkb); // Simple encryption to test correctness
+  crypto_kem_dec(ss, ct, skb); // Simple decryption to test correctness
+  exit(-1);
 
   crypto_kem_keypair(pka, ska); // Generate static key for Alice
 

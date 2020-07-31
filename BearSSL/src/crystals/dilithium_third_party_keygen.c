@@ -27,7 +27,7 @@ static void print_hex_memory(void *mem, size_t length) {
 #define polyeta_packed(mode) ((mode) <= 3 ? 128 : 96)
 
 // Macro to easily map contiguous buffer segments to a key section
-#define buff_to_key(dst, src, size) dst = src; dst##len = size; src += dst##len;
+#define buff_to_key(dst, src, size) dst = (unsigned char *) src; dst##len = size; src = (unsigned char *) src + dst##len;
 
 // Macro to easily map contiguous buffer segments to a polyvec
 #define polyarr_to_polyvec(dst, prev, size) dst.vec = prev.vec + prev.polylen; dst.polylen = size;

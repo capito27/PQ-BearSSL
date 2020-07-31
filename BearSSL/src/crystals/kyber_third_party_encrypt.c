@@ -211,7 +211,7 @@ uint32_t br_kyber_third_party_encrypt(const br_prng_class **rng_ctx,
 
     // pack the ciphertext (we remove to the ciphertext size the compressed polynomial size)
     br_kyber_third_party_polyvec_compress(ct, pk->polynbr, &bp);
-    br_kyber_third_party_poly_compress(ct + BR_KYBER_CIPHERTEXT_SIZE(pk->polynbr) - ((pk->polynbr + 1) * 32),
+    br_kyber_third_party_poly_compress((unsigned char *) ct + BR_KYBER_CIPHERTEXT_SIZE(pk->polynbr) - ((pk->polynbr + 1) * 32),
                                        pk->polynbr, &v);
 
     // Similarly as before, if we didn't get an RNG context, we can assume we're in the decapsulation verification phase,

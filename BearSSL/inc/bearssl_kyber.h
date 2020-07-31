@@ -31,8 +31,7 @@ extern "C" {
  *
  * Such seeds are represented with a 32-byte unsigned char buffer.
  *
- * Such polynomials are represented with a buffer of 256 N-bit integers.
- * 11-bit integers for the public key, and 13-bit integers for the private key.
+ * Such polynomials are represented with a buffer of 256 16-bit integers.
  *
  * This implementation has been tested to support buffers of 2, 3 or 4 polynomials
  * (AKA, Kyber-512, Kyber-768 and Kyber-1024).
@@ -40,18 +39,6 @@ extern "C" {
  * Such integers are stored compressed in big-endian two's complement notation:
  * first byte is the least significant, and the value may be negative (the
  * "sign bit" being the first bit of the most significant byte).
- *
- *
- * Public key structures thus contain, a pointer to the coefficient
- * byte of smallest degree of the first compressed
- * polynomial (`unsigned uint16_t *`), a length (`size_t`) which
- * is the number of relevant bytes and a pointer (`unsigned char *`) to the seed.
- *
- * Private key structures thus contain a pointer to the coefficient
- * byte of smallest degree of the first compressed polynomial (`unsigned uint16_t *`),
- * a length (`size_t`) which is the number of relevant bytes,.
- * a pointer to a public key structure, a pointer to the the intermediary
- * hash (`unsigned char *`) as well as a pointer to the pseudo-random failure value.
  */
 
 /**
@@ -64,7 +51,7 @@ extern "C" {
 //#define KYBER_TESTING_DEC
 
 // This define sets the RNG to always simulate the return of the following byte (only when used with the testing macros)
-//#define KYBER_RNG_OUTPUT_FORCE 0x00
+#define KYBER_RNG_OUTPUT_FORCE 0x66
 
 // These define will print the contents of the relevant data
 //#define KYBER_PRINT_KEYGEN

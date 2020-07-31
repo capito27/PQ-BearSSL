@@ -56,7 +56,7 @@ uint32_t br_kyber_third_party_decrypt(const br_kyber_private_key *sk,
 
     // unpack the ciphertext + secret key
     br_kyber_third_party_polyvec_decompress(&bp, ct,  sk->polynbr);
-    br_kyber_third_party_poly_decompress(&v, ct + ct_len - (sk->polynbr + 1) * 32,  sk->polynbr);
+    br_kyber_third_party_poly_decompress(&v, (unsigned char *) ct + ct_len - (sk->polynbr + 1) * 32,  sk->polynbr);
     br_kyber_third_party_polyvec_frombytes(&priv, sk->privec);
 
     // Recover the encapsulated polynomial
@@ -85,7 +85,7 @@ uint32_t br_kyber_third_party_decrypt(const br_kyber_private_key *sk,
 
     // Constant time equality check
     for (i = 0; i < BR_KYBER_CIPHERTEXT_SIZE(sk->polynbr) / 4; i++) {
-        eq &= EQ(*((uint32_t * )(cmp + 4 * i)), *((uint32_t * )(ct + 4 * i)));
+        eq &= EQ(*((uint32_t * )(cmp + 4 * i)), *((uint32_t * )((unsigned char *) ct + 4 * i)));
     }
 
     // Overwrite coins with hash of ciphertext

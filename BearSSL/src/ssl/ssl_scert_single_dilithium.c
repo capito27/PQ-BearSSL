@@ -61,7 +61,6 @@ se_choose(const br_ssl_server_policy_class **pctx,
 	return 0;
 }
 
-// TODO IMPL
 static uint32_t
 se_do_keyx(const br_ssl_server_policy_class **pctx,
 	unsigned char *data, size_t *len)

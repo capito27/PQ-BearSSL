@@ -1834,8 +1834,8 @@ br_ssl_engine_set_kyber(br_ssl_engine_context *cc, br_kyber_decrypt ikyber_dec,
  * \brief Set the "default" Kyber implementation.
  *
  * This function sets the Kyber implementation to the fastest implementation
- * available on the current platform. This call also sets the elliptic curve
- * implementation itself, there again to the fastest EC implementation available.
+ * available on the current platform. This call also sets the default kyber polynomal 
+ * count, which is 3, for kyber-768.
  *
  * \param cc   SSL engine context.
  */

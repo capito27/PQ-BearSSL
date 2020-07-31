@@ -1,11 +1,25 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "api.h"
 #include "params.h"
 #include "randombytes.h"
 #include "symmetric.h"
 #include "verify.h"
 #include "indcpa.h"
+
+#if defined KYBER_TESTING_KEYGEN || defined KYBER_TESTING_ENC || defined KYBER_TESTING_DEC
+static void print_hex_memory(void *mem, size_t length) {
+    int i;
+    unsigned char *p = (unsigned char *) mem;
+    for (i = 0; i < length; i++) {
+        printf("0x%02x ", p[i]);
+        if ((i % 16 == 15) && i < length)
+            printf("\n");
+    }
+    printf("\n");
+}
+#endif
 
 /*************************************************
 * Name:        crypto_kem_keypair
@@ -29,6 +43,33 @@ int crypto_kem_keypair(unsigned char *pk, unsigned char *sk)
   hash_h(sk+KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES, pk, KYBER_PUBLICKEYBYTES);
   /* Value z for pseudo-random output on reject */
   randombytes(sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_SYMBYTES);
+
+#if defined KYBER_TESTING_KEYGEN || defined KYBER_TESTING_ENC || defined KYBER_TESTING_DEC
+    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
+        memset(sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_RNG_OUTPUT_FORCE, 32);
+#endif
+
+#ifdef KYBER_PRINT_KEYGEN
+	printf("///////////// KEYGEN /////////////\n");
+    // Print the full memory contents of the private and public key
+    printf("public key (%d bytes):\n", KYBER_INDCPA_SECRETKEYBYTES);
+    print_hex_memory(pk, KYBER_INDCPA_SECRETKEYBYTES);
+    printf("public key seed (%d bytes):\n", KYBER_SYMBYTES);
+    print_hex_memory(pk + KYBER_INDCPA_SECRETKEYBYTES, KYBER_SYMBYTES);
+
+    printf("private key (%d bytes):\n", KYBER_INDCPA_SECRETKEYBYTES);
+    print_hex_memory(sk, KYBER_INDCPA_SECRETKEYBYTES);
+    printf("private key hpk (%d bytes):\n", KYBER_SYMBYTES);
+    print_hex_memory(sk+KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES, KYBER_SYMBYTES);
+    printf("private key z (%d bytes):\n", KYBER_SYMBYTES);
+    print_hex_memory(sk+KYBER_SECRETKEYBYTES-KYBER_SYMBYTES, KYBER_SYMBYTES);
+	printf("/////////// KEYGEN END ///////////\n");
+#endif
+
+#ifdef KYBER_TESTING_KEYGEN
+    exit(-1);
+#endif
+
   return 0;
 }
 
@@ -56,6 +97,12 @@ int crypto_kem_enc(unsigned char *ct,
   uint8_t kr[2*KYBER_SYMBYTES];
 
   randombytes(buf, KYBER_SYMBYTES);
+
+#if defined KYBER_TESTING_ENC ||defined KYBER_TESTING_DEC
+    // TESTING STUFFS SO THAT I CAN GET PREDICTABLE OUTPUT
+    memset(buf, KYBER_RNG_OUTPUT_FORCE, 32);
+#endif
+
   /* Don't release system RNG output */
   hash_h(buf, buf, KYBER_SYMBYTES);
 
@@ -70,7 +117,22 @@ int crypto_kem_enc(unsigned char *ct,
   hash_h(kr+KYBER_SYMBYTES, ct, KYBER_CIPHERTEXTBYTES);
   /* hash concatenation of pre-k and H(c) to k */
   kdf(ss, kr, 2*KYBER_SYMBYTES);
-  return 0;
+  
+#ifdef KYBER_PRINT_ENC
+	printf("////////////// ENC ///////////////\n");
+    // Print the full memory contents of the ciphertext and shared secret
+    printf("ciphertext (%d bytes):\n", KYBER_CIPHERTEXTBYTES);
+    print_hex_memory(ct, KYBER_CIPHERTEXTBYTES);
+    printf("shared secret (ENC) (%d bytes):\n", 32);
+    print_hex_memory(ss, 32);
+	printf("//////////// END ENC /////////////\n");
+#endif
+
+#ifdef KYBER_TESTING_ENC
+    exit(-1);
+#endif
+
+    return 0;
 }
 
 /*************************************************
@@ -108,7 +170,7 @@ int crypto_kem_dec(unsigned char *ss,
   for(i=0;i<KYBER_SYMBYTES;i++)
     buf[KYBER_SYMBYTES+i] = sk[KYBER_SECRETKEYBYTES-2*KYBER_SYMBYTES+i];
   hash_g(kr, buf, 2*KYBER_SYMBYTES);
-
+  
   /* coins are in kr+KYBER_SYMBYTES */
   indcpa_enc(cmp, buf, pk, kr+KYBER_SYMBYTES);
 
@@ -122,5 +184,20 @@ int crypto_kem_dec(unsigned char *ss,
 
   /* hash concatenation of pre-k and H(c) to k */
   kdf(ss, kr, 2*KYBER_SYMBYTES);
+  
+#ifdef KYBER_PRINT_DEC
+	printf("////////////// DEC ///////////////\n");
+    // Print the full memory contents of the extracted shared secret
+    printf("Equality : %s\n", fail ? "Not Equal": "Equal");
+    printf("shared secret (DEC) (%d bytes):\n", 32);
+    print_hex_memory(ss, 32);
+	printf("//////////// END DEC /////////////\n");
+#endif
+
+#ifdef KYBER_TESTING_DEC
+    exit(-1);
+#endif
+
   return 0;
 }
+

@@ -5,7 +5,7 @@
 #define polyeta_packed(mode) ((mode) <= 3 ? 128 : 96)
 
 // Macro to easily map contiguous buffer segments to a key section
-#define buff_to_key(dst, src, size) dst = (unsigned char *) src; dst##len = size; src += dst##len;
+#define buff_to_key(dst, src, size) dst = (unsigned char *) src; dst##len = size; src = (unsigned char *) src + dst##len;
 
 /**
  * \brief Helper function to load a dilithium private key from an associated buffer

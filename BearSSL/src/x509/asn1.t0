@@ -150,7 +150,7 @@ err: ERR_X509_WEAK_PUBLIC_KEY
 
 : KEYTYPE_RSA     CX 0 15 { BR_KEYTYPE_RSA } ;
 : KEYTYPE_EC      CX 0 15 { BR_KEYTYPE_EC } ;
-: KEYTYPE_DLTHM      CX 0 15 { BR_KEYTYPE_DLTHM } ;
+: KEYTYPE_DLTHM   CX 0 15 { BR_KEYTYPE_DLTHM } ;
 
 cc: fail ( err -- ! ) {
 	CTX->err = T0_POPi();

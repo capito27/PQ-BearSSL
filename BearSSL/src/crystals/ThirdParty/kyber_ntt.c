@@ -50,7 +50,6 @@ static int16_t br_kyber_third_party_fqmul(int16_t a, int16_t b) {
 * Arguments:   - int16_t r[256]: pointer to input/output vector of elements
 *                                of Zq
 **************************************************/
-//TODO use RLEN instead of magic numbers
 void br_kyber_third_party_ntt(int16_t *r, size_t rlen) {
     unsigned int len, start, j, k;
     int16_t t, zeta;

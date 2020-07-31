@@ -919,7 +919,6 @@ hexb| 0000 | \ List terminator.
 : use-server-key-exchange? ( suite -- bool )
 	cipher-suite-to-elements 12 >> dup dup 1 = swap 2 = or swap 5 = or ;
 
-\ TODO Fix cascading If else with choice later
 \ Returns the Signature algorithm for a key exchange based on the cipher suite
 : get-key-exchange-signature-type ( suite -- i )
 	cipher-suite-to-elements 12 >> { sig-alg }

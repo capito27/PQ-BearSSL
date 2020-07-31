@@ -70,7 +70,7 @@ br_ssl_server_init_full_dilithium(br_ssl_server_context *cc,
 
 	/*
 	 * Set the "server policy": handler for the certificate chain
-	 * and private key operations. (TODO)
+	 * and private key operations.
 	 */
 	br_ssl_server_set_single_dilithium(cc, chain, chain_len, sk, br_dilithium_sign_get_default());
 	br_ssl_engine_set_default_kyber(&cc->eng);

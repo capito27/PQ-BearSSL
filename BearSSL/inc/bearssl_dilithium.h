@@ -10,7 +10,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-//TODO UPDATE DESCRIPTION
 /** \file bearssl_dilithium.h
  *
  * # Dilithium
@@ -19,32 +18,23 @@ extern "C" {
  *
  * ## Key Elements
  *
- * Dilithium public keys consist of a vector of polynomials of degree 255,
+ * Dilithium public keys consist of a public vector of polynomials of degree 255,
  * as well a seed to generate a pseudo-random rectangular polynomial matrix.
  *
- * Dilithium private keys contain a copy of the seed, 
+ * Dilithium private keys contain a copy of the seed, along with the pair of 
+ * secret vectors used to generate the public vector, another vector related to
+ * the public vector, a hash of the public key and a static random value used for
+ * deterministic signature creation (which is NOT supported in this implementation).
  *
  * Such seeds are represented with a 32-byte unsigned char buffer.
  *
- * Such polynomials are represented with a buffer of 256 N-bit integers.
+ * Such polynomials are represented with a buffer of 256 32-bit integers.
  *
  * This implementation has been tested to support Dilithium modes one through four
  *
  * Such integers are stored compressed in big-endian two's complement notation:
  * first byte is the least significant, and the value may be negative (the
  * "sign bit" being the first bit of the most significant byte).
- *
- *
- * Public key structures thus contain, a pointer to the coefficient
- * byte of smallest degree of the first compressed
- * polynomial (`unsigned uint16_t *`), a length (`size_t`) which
- * is the number of relevant bytes and a pointer (`unsigned char *`) to the seed.
- *
- * Private key structures thus contain a pointer to the coefficient
- * byte of smallest degree of the first compressed polynomial (`unsigned uint16_t *`),
- * a length (`size_t`) which is the number of relevant bytes,.
- * a pointer to a public key structure, a pointer to the the intermediary
- * hash (`unsigned char *`) as well as a pointer to the pseudo-random failure value.
  */
 
 /**
@@ -65,13 +55,13 @@ extern "C" {
 //#define DILITHIUM_PRINT_VERIFY
 
 /**
- * \brief Flag that enables faster signing (roughly 25% faster) at the cost of doubling memory usage during
+ * \brief Flag that enables faster signing (roughly 25-35% faster) at the cost of doubling memory usage during
  *        the signature generation
  */
 #define BR_DILITHIUM_FAST_SIGN
 
 /**
- * \brief Kyber public key.
+ * \brief Dilithium public key.
  *
  * The structure matches the canonical public key representation order.
  */
@@ -89,7 +79,7 @@ typedef struct {
 } br_dilithium_public_key;
 
 /**
- * \brief Kyber private key.
+ * \brief Dilithium private key.
  *
  * The structure matches the canonical private key representation order.
  */
@@ -314,7 +304,7 @@ br_dilithium_vrfy br_dilithium_vrfy_get_default(void);
                                              ((mode) + 2u) + 32u + 8u )
 
 /**
- * \brief Type for Kyber key pair generator implementation.
+ * \brief Type for Dilithium key pair generator implementation.
  *
  * This function generates a new Dilithium with `mode` security mode.
  * The private key elements are written in the `kbuf_priv` buffer,
@@ -375,7 +365,7 @@ uint32_t br_dilithium_third_party_keygen(const br_prng_class **rng_ctx,
 br_dilithium_keygen br_dilithium_keygen_get_default(void);
 
 /**
- * \brief Type for Kyber public key derivation implementation.
+ * \brief Type for Dilithium public key derivation implementation.
  *
  * This function derivates the associated public key to a given private key.
  * The public key elements are written in `kbuf_pub`, 
@@ -395,7 +385,7 @@ typedef uint32_t (*br_dilithium_public_key_derivate)(
     br_dilithium_public_key *pk, void *kbuf_pub);
 
 /**
- * \brief Kyber public key derivation with the "third_party" engine.
+ * \brief Dilithium public key derivation with the "third_party" engine.
  *
  * \see br_dilithium_public_key_derivate
  *

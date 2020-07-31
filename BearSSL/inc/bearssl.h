@@ -28,7 +28,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// TODO include kyber to layout list
 /** \mainpage BearSSL API
  *
  * # API Layout

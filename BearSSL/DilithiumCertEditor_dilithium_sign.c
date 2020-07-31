@@ -63,7 +63,7 @@ main(int argc, char *argv[])
 		return -1; // Return if invalid or larger than max size
 	}
 
-	// Read the raw DER file from STDIN (the first argument is )
+	// Read the raw DER file from STDIN
 	len = read(STDIN_FILENO, buf, len);
 
 	// Initialise the key decoder
