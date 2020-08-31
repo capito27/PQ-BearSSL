@@ -18,7 +18,7 @@ For details about the decision process to select this specific TLS version, libr
 
 ## Thesis report erratum
 
-In section 4.2 (Page 14), it is incorrectly asserted that TLS 1.2 would not be able to accomodate a 3-message key exchange due ot its usual 1-RTT handshake.
+In section 4.2 (Page 14), it is incorrectly asserted that TLS 1.3 would not be able to accomodate a 3-message key exchange due ot its usual 1-RTT handshake.
 It has come to my attention that one would be able to make use of the [TLS 1.3 HelloRetryRequest message](https://tools.ietf.org/html/rfc8446#section-4.1.4) to request additional parameters in such a way as to accomodate a 3-message key exchange in a 2-RTT handshake setting.
 
 ## Build instructions
