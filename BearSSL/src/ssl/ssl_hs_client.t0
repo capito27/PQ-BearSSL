@@ -127,7 +127,7 @@ static const unsigned char *HASH_OID[] = {
  * Check the RSA signature on the ServerKeyExchange message.
  *
  *   hash      hash function ID (2 to 6), or 0 for MD5+SHA-1 (with RSA only)
- *   sig_alg   1 for RSA signature, 3 for ECDSA, 4 for Dilithium
+ *   sig_alg   1 for RSA signature, 3 for ECDSA, 4 for Sphincs
  *   sig_len   signature length (in bytes); signature value is in the pad
  *
  * Returned value is 0 on success, or an error code.
@@ -160,7 +160,7 @@ verify_SKE_sig(br_ssl_client_context *ctx,
 		br_multihash_update(&mhc, head, sizeof head);
 		br_multihash_update(&mhc,
 			ctx->eng.ecdhe_point, ctx->eng.ecdhe_point_len);
-	} else { // For Dilithium signatures
+	} else { // For Sphincs signatures
 		head[0] = 0x04;
 		head[1] = ctx->eng.kyber_ct_len >> 8;
 		head[2] = ctx->eng.kyber_ct_len & 0xFF;
@@ -204,8 +204,8 @@ verify_SKE_sig(br_ssl_client_context *ctx,
 		{
 			return BR_ERR_BAD_SIGNATURE;
 		}
-	} else if (sig_alg == 4) { // Dilithium Signature
-		if (!ctx->eng.idilithium(&pk->key.dilithium, hv, hv_len,
+	} else if (sig_alg == 4) { // Sphincs Signature
+		if (!ctx->eng.isphincs_p(&pk->key.sphincs_p, hv, hv_len,
 			ctx->eng.pad, sig_len))
 		{
 			return BR_ERR_BAD_SIGNATURE;
@@ -473,10 +473,10 @@ addr-ctx: hash_id
 	supported-hash-functions { num } drop 0
 	supports-rsa-sign? if num + then
 	supports-ecdsa? if num + then
-	supports-dilithium? if
+	supports-sphincs? if
 		num + 
 		\ If Sha-1 is enabled, we must remove 1 from the signature 
-		\ extension length, since it's an invalid Dilithium signature scheme
+		\ extension length, since it's an invalid Sphincs signature scheme
 		\ Sha-1 is stored as the third bit of the bit field returned by 
 		\ supported-hash-functions
 		supported-hash-functions drop 0x04 and if 
@@ -494,13 +494,13 @@ addr-ctx: hash_id
 	\ Rationale:
 	\ -- SHA-256 and SHA-224 are more efficient on 32-bit architectures
 	\ -- SHA-1 is less than ideally collision-resistant
-	\ -- SHA-1 is not supported by Dilithium
+	\ -- SHA-1 is not supported by Sphincs
 	dup 0x10 and if 4 write8 sign write8 then
 	dup 0x08 and if 3 write8 sign write8 then
 	dup 0x20 and if 5 write8 sign write8 then
 	dup 0x40 and if 6 write8 sign write8 then
 
-	sign 4 = ifnot \ only if not Dilithium
+	sign 4 = ifnot \ only if not Sphincs
 		0x04 and if 2 write8 sign write8 then 
 	else
 		drop
@@ -651,7 +651,7 @@ cc: do-client-hello-KYBR-KEY-HELLO-KGN ( -- ) {
 			2 - write16             \ list length
 			supports-ecdsa? if 3 write-hashes then
 			supports-rsa-sign? if 1 write-hashes then
-			supports-dilithium? if 4 write-hashes then
+			supports-sphincs? if 4 write-hashes then
 		then
 		\ TODO: add an API to specify preference order for curves.
 		\ Right now we send Curve25519 first, then other curves in
@@ -984,7 +984,7 @@ cc: set-server-curve ( -- ) {
 
 \ Verify signature on ECDHE point or kyber ciphertext sent by the server.
 \   'hash' is the hash function to use (1 to 6, or 0 for RSA with MD5+SHA-1)
-\   'sig-alg' is 1 for RSA, 3 for ECDSA, 4 for for Dilithium
+\   'sig-alg' is 1 for RSA, 3 for ECDSA, 4 for for Sphincs
 \   'sig-len' is the signature length (in bytes)
 \ The signature itself is in the pad.
 cc: verify-SKE-sig ( hash sig-alg sig-len -- err ) {
@@ -1001,7 +1001,7 @@ cc: verify-SKE-sig ( hash sig-alg sig-len -- err ) {
 	read-handshake-header 12 = ifnot ERR_UNEXPECTED fail then
 
 	\ We expect either a named curve, and we must support it.
-	\ Or a Dilithium key exchange.
+	\ Or a Sphincs key exchange.
 	read8 { exchange-type }
 	choice
 		exchange-type 3 = uf \ Named curve
@@ -1017,7 +1017,7 @@ cc: verify-SKE-sig ( hash sig-alg sig-len -- err ) {
 			addr-ecdhe_point swap read-blob
 		enduf
 
-		exchange-type 4 = uf \ Dilithium key exchange
+		exchange-type 4 = uf \ Sphincs key exchange
 			\ Read the server ciphertext
 			read16
 			dup 1568 > if ERR_INVALID_ALGORITHM fail then
@@ -1042,7 +1042,7 @@ cc: verify-SKE-sig ( hash sig-alg sig-len -- err ) {
 		>hash
 		\ Get expected signature algorithm and compare with what
 		\ the server just sent. Expected value is 1 for RSA, 3
-		\ for ECDSA and 4 for Dilithium.
+		\ for ECDSA and 4 for Sphincs.
 		read8
 		sig-alg = ifnot ERR_INVALID_ALGORITHM fail then
 	else
@@ -1054,14 +1054,14 @@ cc: verify-SKE-sig ( hash sig-alg sig-len -- err ) {
 	read16 dup { sig-len }
 
 	\ If signature too large
-	dup 3366 > if ERR_LIMIT_EXCEEDED fail then
+	dup 49856 > if ERR_LIMIT_EXCEEDED fail then
 	addr-pad swap read-blob
 
 	\ Verify signature.
 	hash sig-alg sig-len verify-SKE-sig
 	dup if fail then drop
 	
-	\ If we're doing a Dilithium key exchange, store the server's ephemeral key
+	\ If we're doing a Sphincs key exchange, store the server's ephemeral key
 	exchange-type 4 = if
 			\ Read the server ephemeral key
 			read16
@@ -1140,7 +1140,7 @@ cc: get-client-chain ( auth_types -- ) {
 \ Parse CertificateRequest. Header has already been read.
 : read-contents-CertificateRequest ( lim -- )
 	\ Read supported client authentication types. We keep only
-	\ RSA, ECDSA, ECDH, DLTHM.
+	\ RSA, ECDSA, ECDH, SPHINCS.
 	0 { auth_types }
 	read8 open-elt
 	begin dup while

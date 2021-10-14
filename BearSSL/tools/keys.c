@@ -56,7 +56,7 @@ decode_key(const unsigned char *buf, size_t len)
 	switch (br_skey_decoder_key_type(&dc)) {
 		const br_rsa_private_key *rk;
 		const br_ec_private_key *ek;
-		const br_dilithium_private_key * dk;
+		const br_sphincs_p_private_key * dk;
 
 	case BR_KEYTYPE_RSA:
 		rk = br_skey_decoder_get_rsa(&dc);
@@ -84,23 +84,13 @@ decode_key(const unsigned char *buf, size_t len)
 		sk->key.ec.xlen = ek->xlen;
 		break;
 
-	case BR_KEYTYPE_DLTHM:
-		dk = br_skey_decoder_get_dilithium(&dc);
+	case BR_KEYTYPE_SPHINCS:
+		dk = br_skey_decoder_get_sphincs_p(&dc);
 		sk = xmalloc(sizeof *sk);
-		sk->key_type = BR_KEYTYPE_DLTHM;
-		sk->key.dilithium.rho = xblobdup(dk->rho, dk->rholen);
-		sk->key.dilithium.rholen = dk->rholen;
-		sk->key.dilithium.key = xblobdup(dk->key, dk->keylen);
-		sk->key.dilithium.keylen = dk->keylen;
-		sk->key.dilithium.tr = xblobdup(dk->tr, dk->trlen);
-		sk->key.dilithium.trlen = dk->trlen;
-		sk->key.dilithium.s1 = xblobdup(dk->s1, dk->s1len);
-		sk->key.dilithium.s1len = dk->s1len;
-		sk->key.dilithium.s2 = xblobdup(dk->s2, dk->s2len);
-		sk->key.dilithium.s2len = dk->s2len;
-		sk->key.dilithium.t0 = xblobdup(dk->t0, dk->t0len);
-		sk->key.dilithium.t0len = dk->t0len;
-		sk->key.dilithium.mode = dk->mode;
+		sk->key_type = BR_KEYTYPE_SPHINCS;
+		sk->key.sphincs_p.k = xblobdup(dk->k, dk->klen);
+		sk->key.sphincs_p.klen = dk->klen;
+		sk->key.sphincs_p.mode = dk->mode;
 		break;
 
 	default:
@@ -144,7 +134,7 @@ read_private_key(const char *fname)
 			name = pos[u].name;
 			if (eqstr(name, "RSA PRIVATE KEY")
 				|| eqstr(name, "EC PRIVATE KEY")
-				|| eqstr(name, "DILITHIUM PRIVATE KEY")
+				|| eqstr(name, "SPHINCS PRIVATE KEY")
 				|| eqstr(name, "PRIVATE KEY"))
 			{
 				sk = decode_key(pos[u].data, pos[u].data_len);
@@ -186,13 +176,8 @@ free_private_key(private_key *sk)
 	case BR_KEYTYPE_EC:
 		xfree(sk->key.ec.x);
 		break;
-	case BR_KEYTYPE_DLTHM:
-		xfree(sk->key.dilithium.rho);
-		xfree(sk->key.dilithium.key);
-		xfree(sk->key.dilithium.tr);
-		xfree(sk->key.dilithium.s1);
-		xfree(sk->key.dilithium.s2);
-		xfree(sk->key.dilithium.t0);
+	case BR_KEYTYPE_SPHINCS:
+		xfree(sk->key.sphincs_p.k);
 		break;
 
 	}

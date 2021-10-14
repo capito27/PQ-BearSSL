@@ -48,12 +48,12 @@ br_x509_knownkey_init_ec(br_x509_knownkey_context *ctx,
 
 /* see bearssl_x509.h */
 void
-br_x509_knownkey_init_dilithium(br_x509_knownkey_context *ctx,
-	const br_dilithium_public_key *pk, unsigned usages)
+br_x509_knownkey_init_sphincs_p(br_x509_knownkey_context *ctx,
+	const br_sphincs_p_public_key *pk, unsigned usages)
 {
 	ctx->vtable = &br_x509_knownkey_vtable;
-	ctx->pkey.key_type = BR_KEYTYPE_DLTHM;
-	ctx->pkey.key.dilithium = *pk;
+	ctx->pkey.key_type = BR_KEYTYPE_SPHINCS;
+	ctx->pkey.key.sphincs_p = *pk;
 	ctx->usages = usages;
 }
 

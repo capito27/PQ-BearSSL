@@ -68,26 +68,12 @@ coresrc=" \
 	src/codec/enc64le.c \
 	src/codec/pemdec.c \
 	src/codec/pemenc.c \
-	src/crystals/dilithium_default_key_derivation.c \
-	src/crystals/dilithium_default_keygen.c \
-	src/crystals/dilithium_default_sign.c \
-	src/crystals/dilithium_default_verify.c \
-	src/crystals/dilithium_third_party_key_derivation.c \
-	src/crystals/dilithium_third_party_keygen.c \
-	src/crystals/dilithium_third_party_sign.c \
-	src/crystals/dilithium_third_party_verify.c \
 	src/crystals/kyber_default_decrypt.c \
 	src/crystals/kyber_default_encrypt.c \
 	src/crystals/kyber_default_keygen.c \
 	src/crystals/kyber_third_party_decrypt.c \
 	src/crystals/kyber_third_party_encrypt.c \
 	src/crystals/kyber_third_party_keygen.c \
-	src/crystals/ThirdParty/dilithium_ntt.c \
-	src/crystals/ThirdParty/dilithium_packing.c \
-	src/crystals/ThirdParty/dilithium_poly.c \
-	src/crystals/ThirdParty/dilithium_polyvec.c \
-	src/crystals/ThirdParty/dilithium_reduce.c \
-	src/crystals/ThirdParty/dilithium_rounding.c \
 	src/crystals/ThirdParty/kyber_ntt.c \
 	src/crystals/ThirdParty/kyber_poly.c \
 	src/crystals/ThirdParty/kyber_polyvec.c \
@@ -268,11 +254,17 @@ coresrc=" \
 	src/rsa/rsa_pss_sig_pad.c \
 	src/rsa/rsa_pss_sig_unpad.c \
 	src/rsa/rsa_ssl_decrypt.c \
+	src/sphincs-shake256/sphincs_default_keygen.c \
+	src/sphincs-shake256/sphincs_default_sign.c \
+	src/sphincs-shake256/sphincs_default_verify.c \
+	src/sphincs-shake256/sphincs_wrap_keygen.c \
+	src/sphincs-shake256/sphincs_wrap_sign.c \
+	src/sphincs-shake256/sphincs_wrap_verify.c \
 	src/ssl/prf.c \
 	src/ssl/prf_md5sha1.c \
 	src/ssl/prf_sha256.c \
 	src/ssl/prf_sha384.c \
-	src/ssl/ssl_ccert_single_dilithium.c \
+	src/ssl/ssl_ccert_single_sphincs.c \
 	src/ssl/ssl_ccert_single_ec.c \
 	src/ssl/ssl_ccert_single_rsa.c \
 	src/ssl/ssl_client.c \
@@ -284,7 +276,7 @@ coresrc=" \
 	src/ssl/ssl_engine_default_aesgcm.c \
 	src/ssl/ssl_engine_default_chapol.c \
 	src/ssl/ssl_engine_default_descbc.c \
-	src/ssl/ssl_engine_default_dilithium.c \
+	src/ssl/ssl_engine_default_sphincs.c \
 	src/ssl/ssl_engine_default_ec.c \
 	src/ssl/ssl_engine_default_ecdsa.c \
 	src/ssl/ssl_engine_default_kyber.c \
@@ -299,11 +291,11 @@ coresrc=" \
 	src/ssl/ssl_rec_ccm.c \
 	src/ssl/ssl_rec_chapol.c \
 	src/ssl/ssl_rec_gcm.c \
-	src/ssl/ssl_scert_single_dilithium.c \
+	src/ssl/ssl_scert_single_sphincs.c \
 	src/ssl/ssl_scert_single_ec.c \
 	src/ssl/ssl_scert_single_rsa.c \
 	src/ssl/ssl_server.c \
-	src/ssl/ssl_server_full_dilithium.c \
+	src/ssl/ssl_server_full_sphincs.c \
 	src/ssl/ssl_server_full_ec.c \
 	src/ssl/ssl_server_full_rsa.c \
 	src/ssl/ssl_server_mine2c.c \
@@ -364,8 +356,8 @@ coresrc=" \
 	src/symcipher/poly1305_ctmulq.c \
 	src/symcipher/poly1305_i15.c \
 	src/x509/asn1enc.c \
-	src/x509/encode_dilithium_pk8der.c \
-	src/x509/encode_dilithium_rawder.c \
+	src/x509/encode_sphincs_pk8der.c \
+	src/x509/encode_sphincs_rawder.c \
 	src/x509/encode_ec_pk8der.c \
 	src/x509/encode_ec_rawder.c \
 	src/x509/encode_rsa_pk8der.c \
@@ -413,7 +405,6 @@ headerspub=" \
 	inc/bearssl.h \
 	inc/bearssl_aead.h \
 	inc/bearssl_block.h \
-	inc/bearssl_dilithium.h \
 	inc/bearssl_ec.h \
 	inc/bearssl_hash.h \
 	inc/bearssl_hmac.h \
@@ -423,8 +414,10 @@ headerspub=" \
 	inc/bearssl_prf.h \
 	inc/bearssl_rand.h \
 	inc/bearssl_rsa.h \
+	inc/bearssl_sphincs_p.h \
 	inc/bearssl_ssl.h \
-	inc/bearssl_x509.h"
+	inc/bearssl_x509.h \
+	inc/oqs/oqs.h"
 
 # Private header files.
 headerspriv=" \
@@ -562,21 +555,22 @@ clean:
 
 \$(BEARSSLLIB): \$(OBJDIR) \$(OBJ)
 	\$(AR) \$(ARFLAGS) \$(AROUT)\$(BEARSSLLIB) \$(OBJ)
+	\$(AR) \$(ARFLAGS) \$(AROUT)\$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)*.o
 
 \$(BEARSSLDLL): \$(OBJDIR) \$(OBJ)
-	\$(LDDLL) \$(LDDLLFLAGS) \$(LDDLLOUT)\$(BEARSSLDLL) \$(OBJ)
+	\$(LDDLL) \$(LDDLLFLAGS) \$(LDDLLOUT)\$(BEARSSLDLL) \$(OBJ) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(BRSSL): \$(BEARSSLLIB) \$(OBJBRSSL)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(BRSSL) \$(OBJBRSSL) \$(BEARSSLLIB)
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(BRSSL) \$(OBJBRSSL) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(TESTCRYPTO): \$(BEARSSLLIB) \$(OBJTESTCRYPTO)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTCRYPTO) \$(OBJTESTCRYPTO) \$(BEARSSLLIB)
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTCRYPTO) \$(OBJTESTCRYPTO) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(TESTSPEED): \$(BEARSSLLIB) \$(OBJTESTSPEED)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTSPEED) \$(OBJTESTSPEED) \$(BEARSSLLIB)
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTSPEED) \$(OBJTESTSPEED) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(TESTX509): \$(BEARSSLLIB) \$(OBJTESTX509)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTX509) \$(OBJTESTX509) \$(BEARSSLLIB)
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTX509) \$(OBJTESTX509) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 EOF
 
 (for f in $coresrc ; do
@@ -586,7 +580,7 @@ EOF
 done
 
 for f in $toolssrc ; do
-	b="$(basename "$f" .c)\$O"
+	b="$(basename "$f" .c)\$O"src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 	g="$(escsep "$f")"
 	printf '\n$(OBJDIR)$P%s: %s $(HEADERSTOOLS)\n\t$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$P%s %s\n' "$b" "$g" "$b" "$g"
 done

@@ -50,8 +50,8 @@ br_x509_minimal_init_full(br_x509_minimal_context *xc,
 	br_x509_minimal_set_rsa(xc, &br_rsa_i31_pkcs1_vrfy);
 	br_x509_minimal_set_ecdsa(xc,
 		&br_ec_prime_i31, &br_ecdsa_i31_vrfy_asn1);
-	br_x509_minimal_set_dilithium(xc, 
-		br_dilithium_vrfy_get_default());
+	br_x509_minimal_set_sphincs_p(xc, 
+		br_sphincs_p_vrfy_get_default());
 	for (id = br_md5_ID; id <= br_sha512_ID; id ++) {
 		const br_hash_class *hc;
 

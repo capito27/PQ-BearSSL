@@ -1294,31 +1294,15 @@ test_speed_ecdsa_i31(void) {
 }
 
 static void
-test_speed_dilithium_inner(char *name,
-                       br_dilithium_sign sign, br_dilithium_vrfy verify, br_dilithium_keygen kgen, unsigned mode) {
-    unsigned char sig[BR_DILITHIUM_SIGNATURE_SIZE(mode)];
-    char const *msg = "THIS IS A DILITHIUM TEST SIGN MESSAGE";
-    unsigned char kbuf_priv[BR_DILITHIUM_SECRET_BUFF_SIZE(mode)];
-    unsigned char kbuf_pub[BR_DILITHIUM_PUBLIC_BUFF_SIZE(mode)];
+test_speed_sphincs_p_inner(char *name,
+                       br_sphincs_p_sign sign, br_sphincs_p_vrfy verify, br_sphincs_p_keygen kgen, unsigned mode) {
+    unsigned char sig[BR_SPHINCS_P_SIGNATURE_SIZE(mode)];
+    char const *msg = "THIS IS A SPHINCS TEST SIGN MESSAGE";
+    unsigned char kbuf_priv[BR_SPHINCS_P_SECRET_BUFF_SIZE(mode)];
+    unsigned char kbuf_pub[BR_SPHINCS_P_PUBLIC_BUFF_SIZE(mode)];
     long num;
-    br_dilithium_private_key sk;
-    br_dilithium_public_key pk;
-
-    br_aesctr_drbg_context rng;
-    const br_block_ctr_class *ictr;
-
-    ictr = br_aes_x86ni_ctr_get_vtable();
-    if (ictr == NULL) {
-        ictr = br_aes_pwr8_ctr_get_vtable();
-        if (ictr == NULL) {
-#if BR_64
-            ictr = &br_aes_ct64_ctr_vtable;
-#else
-            ictr = &br_aes_ct_ctr_vtable;
-#endif
-        }
-    }
-    br_aesctr_drbg_init(&rng, ictr, "Dilithium keygen seed", 15);
+    br_sphincs_p_private_key sk;
+    br_sphincs_p_public_key pk;
 
     if (kgen == 0) {
         printf("%-30s KEYGEN UNAVAILABLE\n", name);
@@ -1334,18 +1318,18 @@ test_speed_dilithium_inner(char *name,
 
         begin = clock();
         for (k = num; k > 0; k--) {
-            kgen(&rng.vtable, &sk, kbuf_priv, &pk, kbuf_pub, mode);
-#ifdef DILITHIUM_TESTING_SIGN
+            kgen(&sk, kbuf_priv, &pk, kbuf_pub, mode);
+#ifdef SPHINCS_P_TESTING_SIGN
             break;
 #endif
-#ifdef DILITHIUM_TESTING_VERIFY
+#ifdef SPHINCS_P_TESTING_VERIFY
             break;
 #endif
         }
-#ifdef DILITHIUM_TESTING_SIGN
+#ifdef SPHINCS_P_TESTING_SIGN
         break;
 #endif
-#ifdef DILITHIUM_TESTING_VERIFY
+#ifdef SPHINCS_P_TESTING_VERIFY
         break;
 #endif
         end = clock();
@@ -1368,8 +1352,8 @@ test_speed_dilithium_inner(char *name,
 
         begin = clock();
         for (k = num; k > 0; k--) {
-            sign(&rng.vtable, &sk, sig, sizeof(sig), msg, strlen(msg));
-#ifdef DILITHIUM_TESTING_VERIFY
+            sign(&sk, sig, sizeof(sig), msg, strlen(msg));
+#ifdef SPHINCS_P_TESTING_VERIFY
             break;
 #endif
         }
@@ -1382,7 +1366,7 @@ test_speed_dilithium_inner(char *name,
             break;
         }
         num <<= 1;
-#ifdef DILITHIUM_TESTING_VERIFY
+#ifdef SPHINCS_P_TESTING_VERIFY
         break;
 #endif
     }
@@ -1397,7 +1381,8 @@ test_speed_dilithium_inner(char *name,
         begin = clock();
         for (k = num; k > 0; k--) {
             verify(&pk, msg, strlen(msg), sig, sizeof(sig));
-#ifdef DILITHIUM_TESTING_VERIFY
+            
+#ifdef SPHINCS_P_TESTING_VERIFY
             break;
 #endif
         }
@@ -1410,47 +1395,122 @@ test_speed_dilithium_inner(char *name,
             break;
         }
         num <<= 1;
-#ifdef DILITHIUM_TESTING_VERIFY
+#ifdef SPHINCS_P_TESTING_VERIFY
         break;
 #endif
     }
 }
 
 static void
-test_speed_dilithium_1_third_party(void) {
-    test_speed_dilithium_inner("Dilithium1 third party",
-                               &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_vrfy,
-                               &br_dilithium_third_party_keygen,
-                               1);
+test_speed_sphincs_shake256_128f_robust_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_128f_robust third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_128f_robust);
 }
 
 static void
-test_speed_dilithium_2_third_party(void) {
-    test_speed_dilithium_inner("Dilithium2 third party",
-                               &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_vrfy,
-                               &br_dilithium_third_party_keygen,
-                               2);
+test_speed_sphincs_shake256_128f_simple_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_128f_simple third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_128f_simple);
 }
 
 static void
-test_speed_dilithium_3_third_party(void) {
-    test_speed_dilithium_inner("Dilithium3 third party",
-                               &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_vrfy,
-                               &br_dilithium_third_party_keygen,
-                               3);
+test_speed_sphincs_shake256_128s_robust_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_128s_robust third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_128s_robust);
 }
 
 static void
-test_speed_dilithium_4_third_party(void) {
-    test_speed_dilithium_inner("Dilithium4 third party",
-                               &br_dilithium_third_party_sign,
-                               &br_dilithium_third_party_vrfy,
-                               &br_dilithium_third_party_keygen,
-                               4);
+test_speed_sphincs_shake256_128s_simple_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_128s_simple third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_128s_simple);
 }
+
+static void
+test_speed_sphincs_shake256_192f_robust_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_192f_robust third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_192f_robust);
+}
+
+static void
+test_speed_sphincs_shake256_192f_simple_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_192f_simple third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_192f_simple);
+}
+
+static void
+test_speed_sphincs_shake256_192s_robust_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_192s_robust third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_192s_robust);
+}
+
+static void
+test_speed_sphincs_shake256_192s_simple_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_192s_simple third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_192s_simple);
+}
+
+static void
+test_speed_sphincs_shake256_256f_robust_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_256f_robust third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_256f_robust);
+}
+
+static void
+test_speed_sphincs_shake256_256f_simple_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_256f_simple third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_256f_simple);
+}
+
+static void
+test_speed_sphincs_shake256_256s_robust_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_256s_robust third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_256s_robust);
+}
+
+static void
+test_speed_sphincs_shake256_256s_simple_third_party(void) {
+    test_speed_sphincs_p_inner("sphincs_shake256_256s_simple third party",
+                               &br_sphincs_p_third_party_sign,
+                               &br_sphincs_p_third_party_vrfy,
+                               &br_sphincs_p_third_party_keygen,
+                               shake256_256s_simple);
+}
+
+
+
 
 static void
 test_speed_kyber_inner(char *name,
@@ -1989,10 +2049,18 @@ static const struct {
         STU(ecdsa_i15),
         STU(ecdsa_i31),
 
-        STU(dilithium_1_third_party),
-        STU(dilithium_2_third_party),
-        STU(dilithium_3_third_party),
-        STU(dilithium_4_third_party),
+        STU(sphincs_shake256_128f_robust_third_party),
+        STU(sphincs_shake256_128f_simple_third_party),
+        STU(sphincs_shake256_128s_robust_third_party),
+        STU(sphincs_shake256_128s_simple_third_party),
+        STU(sphincs_shake256_192f_robust_third_party),
+        STU(sphincs_shake256_192f_simple_third_party),
+        STU(sphincs_shake256_192s_robust_third_party),
+        STU(sphincs_shake256_192s_simple_third_party),
+        STU(sphincs_shake256_256f_robust_third_party),
+        STU(sphincs_shake256_256f_simple_third_party),
+        STU(sphincs_shake256_256s_robust_third_party),
+        STU(sphincs_shake256_256s_simple_third_party),
 
         STU(kyber_512_third_party),
         STU(kyber_768_third_party),

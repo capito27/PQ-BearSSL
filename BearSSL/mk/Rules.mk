@@ -20,26 +20,12 @@ OBJ = \
  $(OBJDIR)$Penc64le$O \
  $(OBJDIR)$Ppemdec$O \
  $(OBJDIR)$Ppemenc$O \
- $(OBJDIR)$Pdilithium_default_key_derivation$O \
- $(OBJDIR)$Pdilithium_default_keygen$O \
- $(OBJDIR)$Pdilithium_default_sign$O \
- $(OBJDIR)$Pdilithium_default_verify$O \
- $(OBJDIR)$Pdilithium_third_party_key_derivation$O \
- $(OBJDIR)$Pdilithium_third_party_keygen$O \
- $(OBJDIR)$Pdilithium_third_party_sign$O \
- $(OBJDIR)$Pdilithium_third_party_verify$O \
  $(OBJDIR)$Pkyber_default_decrypt$O \
  $(OBJDIR)$Pkyber_default_encrypt$O \
  $(OBJDIR)$Pkyber_default_keygen$O \
  $(OBJDIR)$Pkyber_third_party_decrypt$O \
  $(OBJDIR)$Pkyber_third_party_encrypt$O \
  $(OBJDIR)$Pkyber_third_party_keygen$O \
- $(OBJDIR)$Pdilithium_ntt$O \
- $(OBJDIR)$Pdilithium_packing$O \
- $(OBJDIR)$Pdilithium_poly$O \
- $(OBJDIR)$Pdilithium_polyvec$O \
- $(OBJDIR)$Pdilithium_reduce$O \
- $(OBJDIR)$Pdilithium_rounding$O \
  $(OBJDIR)$Pkyber_ntt$O \
  $(OBJDIR)$Pkyber_poly$O \
  $(OBJDIR)$Pkyber_polyvec$O \
@@ -220,11 +206,17 @@ OBJ = \
  $(OBJDIR)$Prsa_pss_sig_pad$O \
  $(OBJDIR)$Prsa_pss_sig_unpad$O \
  $(OBJDIR)$Prsa_ssl_decrypt$O \
+ $(OBJDIR)$Psphincs_default_keygen$O \
+ $(OBJDIR)$Psphincs_default_sign$O \
+ $(OBJDIR)$Psphincs_default_verify$O \
+ $(OBJDIR)$Psphincs_wrap_keygen$O \
+ $(OBJDIR)$Psphincs_wrap_sign$O \
+ $(OBJDIR)$Psphincs_wrap_verify$O \
  $(OBJDIR)$Pprf$O \
  $(OBJDIR)$Pprf_md5sha1$O \
  $(OBJDIR)$Pprf_sha256$O \
  $(OBJDIR)$Pprf_sha384$O \
- $(OBJDIR)$Pssl_ccert_single_dilithium$O \
+ $(OBJDIR)$Pssl_ccert_single_sphincs$O \
  $(OBJDIR)$Pssl_ccert_single_ec$O \
  $(OBJDIR)$Pssl_ccert_single_rsa$O \
  $(OBJDIR)$Pssl_client$O \
@@ -236,7 +228,7 @@ OBJ = \
  $(OBJDIR)$Pssl_engine_default_aesgcm$O \
  $(OBJDIR)$Pssl_engine_default_chapol$O \
  $(OBJDIR)$Pssl_engine_default_descbc$O \
- $(OBJDIR)$Pssl_engine_default_dilithium$O \
+ $(OBJDIR)$Pssl_engine_default_sphincs$O \
  $(OBJDIR)$Pssl_engine_default_ec$O \
  $(OBJDIR)$Pssl_engine_default_ecdsa$O \
  $(OBJDIR)$Pssl_engine_default_kyber$O \
@@ -251,11 +243,11 @@ OBJ = \
  $(OBJDIR)$Pssl_rec_ccm$O \
  $(OBJDIR)$Pssl_rec_chapol$O \
  $(OBJDIR)$Pssl_rec_gcm$O \
- $(OBJDIR)$Pssl_scert_single_dilithium$O \
+ $(OBJDIR)$Pssl_scert_single_sphincs$O \
  $(OBJDIR)$Pssl_scert_single_ec$O \
  $(OBJDIR)$Pssl_scert_single_rsa$O \
  $(OBJDIR)$Pssl_server$O \
- $(OBJDIR)$Pssl_server_full_dilithium$O \
+ $(OBJDIR)$Pssl_server_full_sphincs$O \
  $(OBJDIR)$Pssl_server_full_ec$O \
  $(OBJDIR)$Pssl_server_full_rsa$O \
  $(OBJDIR)$Pssl_server_mine2c$O \
@@ -316,8 +308,8 @@ OBJ = \
  $(OBJDIR)$Ppoly1305_ctmulq$O \
  $(OBJDIR)$Ppoly1305_i15$O \
  $(OBJDIR)$Pasn1enc$O \
- $(OBJDIR)$Pencode_dilithium_pk8der$O \
- $(OBJDIR)$Pencode_dilithium_rawder$O \
+ $(OBJDIR)$Pencode_sphincs_pk8der$O \
+ $(OBJDIR)$Pencode_sphincs_rawder$O \
  $(OBJDIR)$Pencode_ec_pk8der$O \
  $(OBJDIR)$Pencode_ec_rawder$O \
  $(OBJDIR)$Pencode_rsa_pk8der$O \
@@ -351,7 +343,7 @@ OBJTESTSPEED = \
  $(OBJDIR)$Ptest_speed$O
 OBJTESTX509 = \
  $(OBJDIR)$Ptest_x509$O
-HEADERSPUB = inc$Pbearssl.h inc$Pbearssl_aead.h inc$Pbearssl_block.h inc$Pbearssl_dilithium.h inc$Pbearssl_ec.h inc$Pbearssl_hash.h inc$Pbearssl_hmac.h inc$Pbearssl_kdf.h inc$Pbearssl_kyber.h inc$Pbearssl_pem.h inc$Pbearssl_prf.h inc$Pbearssl_rand.h inc$Pbearssl_rsa.h inc$Pbearssl_ssl.h inc$Pbearssl_x509.h
+HEADERSPUB = inc$Pbearssl.h inc$Pbearssl_aead.h inc$Pbearssl_block.h inc$Pbearssl_ec.h inc$Pbearssl_hash.h inc$Pbearssl_hmac.h inc$Pbearssl_kdf.h inc$Pbearssl_kyber.h inc$Pbearssl_pem.h inc$Pbearssl_prf.h inc$Pbearssl_rand.h inc$Pbearssl_rsa.h inc$Pbearssl_sphincs_p.h inc$Pbearssl_ssl.h inc$Pbearssl_x509.h inc$Poqs$Poqs.h
 HEADERSPRIV = $(HEADERSPUB) src$Pconfig.h src$Pinner.h
 HEADERSTOOLS = $(HEADERSPUB) tools$Pbrssl.h
 T0SRC = T0$PBlobWriter.cs T0$PCPU.cs T0$PCodeElement.cs T0$PCodeElementJump.cs T0$PCodeElementUInt.cs T0$PCodeElementUIntExpr.cs T0$PCodeElementUIntInt.cs T0$PCodeElementUIntUInt.cs T0$PConstData.cs T0$POpcode.cs T0$POpcodeCall.cs T0$POpcodeConst.cs T0$POpcodeGetLocal.cs T0$POpcodeJump.cs T0$POpcodeJumpIf.cs T0$POpcodeJumpIfNot.cs T0$POpcodeJumpUncond.cs T0$POpcodePutLocal.cs T0$POpcodeRet.cs T0$PSType.cs T0$PT0Comp.cs T0$PTPointerBase.cs T0$PTPointerBlob.cs T0$PTPointerExpr.cs T0$PTPointerNull.cs T0$PTPointerXT.cs T0$PTValue.cs T0$PWord.cs T0$PWordBuilder.cs T0$PWordData.cs T0$PWordInterpreted.cs T0$PWordNative.cs
@@ -391,21 +383,22 @@ $(OBJDIR):
 
 $(BEARSSLLIB): $(OBJDIR) $(OBJ)
 	$(AR) $(ARFLAGS) $(AROUT)$(BEARSSLLIB) $(OBJ)
+	$(AR) $(ARFLAGS) $(AROUT)$(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)*.o
 
 $(BEARSSLDLL): $(OBJDIR) $(OBJ)
-	$(LDDLL) $(LDDLLFLAGS) $(LDDLLOUT)$(BEARSSLDLL) $(OBJ)
+	$(LDDLL) $(LDDLLFLAGS) $(LDDLLOUT)$(BEARSSLDLL) $(OBJ) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(BRSSL): $(BEARSSLLIB) $(OBJBRSSL)
-	$(LD) $(LDFLAGS) $(LDOUT)$(BRSSL) $(OBJBRSSL) $(BEARSSLLIB)
+	$(LD) $(LDFLAGS) $(LDOUT)$(BRSSL) $(OBJBRSSL) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(TESTCRYPTO): $(BEARSSLLIB) $(OBJTESTCRYPTO)
-	$(LD) $(LDFLAGS) $(LDOUT)$(TESTCRYPTO) $(OBJTESTCRYPTO) $(BEARSSLLIB)
+	$(LD) $(LDFLAGS) $(LDOUT)$(TESTCRYPTO) $(OBJTESTCRYPTO) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(TESTSPEED): $(BEARSSLLIB) $(OBJTESTSPEED)
-	$(LD) $(LDFLAGS) $(LDOUT)$(TESTSPEED) $(OBJTESTSPEED) $(BEARSSLLIB)
+	$(LD) $(LDFLAGS) $(LDOUT)$(TESTSPEED) $(OBJTESTSPEED) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(TESTX509): $(BEARSSLLIB) $(OBJTESTX509)
-	$(LD) $(LDFLAGS) $(LDOUT)$(TESTX509) $(OBJTESTX509) $(BEARSSLLIB)
+	$(LD) $(LDFLAGS) $(LDOUT)$(TESTX509) $(OBJTESTX509) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(OBJDIR)$Psettings$O: src$Psettings.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psettings$O src$Psettings.c
@@ -464,30 +457,6 @@ $(OBJDIR)$Ppemdec$O: src$Pcodec$Ppemdec.c $(HEADERSPRIV)
 $(OBJDIR)$Ppemenc$O: src$Pcodec$Ppemenc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Ppemenc$O src$Pcodec$Ppemenc.c
 
-$(OBJDIR)$Pdilithium_default_key_derivation$O: src$Pcrystals$Pdilithium_default_key_derivation.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_key_derivation$O src$Pcrystals$Pdilithium_default_key_derivation.c
-
-$(OBJDIR)$Pdilithium_default_keygen$O: src$Pcrystals$Pdilithium_default_keygen.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_keygen$O src$Pcrystals$Pdilithium_default_keygen.c
-
-$(OBJDIR)$Pdilithium_default_sign$O: src$Pcrystals$Pdilithium_default_sign.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_sign$O src$Pcrystals$Pdilithium_default_sign.c
-
-$(OBJDIR)$Pdilithium_default_verify$O: src$Pcrystals$Pdilithium_default_verify.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_default_verify$O src$Pcrystals$Pdilithium_default_verify.c
-
-$(OBJDIR)$Pdilithium_third_party_key_derivation$O: src$Pcrystals$Pdilithium_third_party_key_derivation.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_key_derivation$O src$Pcrystals$Pdilithium_third_party_key_derivation.c
-
-$(OBJDIR)$Pdilithium_third_party_keygen$O: src$Pcrystals$Pdilithium_third_party_keygen.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_keygen$O src$Pcrystals$Pdilithium_third_party_keygen.c
-
-$(OBJDIR)$Pdilithium_third_party_sign$O: src$Pcrystals$Pdilithium_third_party_sign.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_sign$O src$Pcrystals$Pdilithium_third_party_sign.c
-
-$(OBJDIR)$Pdilithium_third_party_verify$O: src$Pcrystals$Pdilithium_third_party_verify.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_third_party_verify$O src$Pcrystals$Pdilithium_third_party_verify.c
-
 $(OBJDIR)$Pkyber_default_decrypt$O: src$Pcrystals$Pkyber_default_decrypt.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_default_decrypt$O src$Pcrystals$Pkyber_default_decrypt.c
 
@@ -505,24 +474,6 @@ $(OBJDIR)$Pkyber_third_party_encrypt$O: src$Pcrystals$Pkyber_third_party_encrypt
 
 $(OBJDIR)$Pkyber_third_party_keygen$O: src$Pcrystals$Pkyber_third_party_keygen.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_third_party_keygen$O src$Pcrystals$Pkyber_third_party_keygen.c
-
-$(OBJDIR)$Pdilithium_ntt$O: src$Pcrystals$PThirdParty$Pdilithium_ntt.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_ntt$O src$Pcrystals$PThirdParty$Pdilithium_ntt.c
-
-$(OBJDIR)$Pdilithium_packing$O: src$Pcrystals$PThirdParty$Pdilithium_packing.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_packing$O src$Pcrystals$PThirdParty$Pdilithium_packing.c
-
-$(OBJDIR)$Pdilithium_poly$O: src$Pcrystals$PThirdParty$Pdilithium_poly.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_poly$O src$Pcrystals$PThirdParty$Pdilithium_poly.c
-
-$(OBJDIR)$Pdilithium_polyvec$O: src$Pcrystals$PThirdParty$Pdilithium_polyvec.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_polyvec$O src$Pcrystals$PThirdParty$Pdilithium_polyvec.c
-
-$(OBJDIR)$Pdilithium_reduce$O: src$Pcrystals$PThirdParty$Pdilithium_reduce.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_reduce$O src$Pcrystals$PThirdParty$Pdilithium_reduce.c
-
-$(OBJDIR)$Pdilithium_rounding$O: src$Pcrystals$PThirdParty$Pdilithium_rounding.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pdilithium_rounding$O src$Pcrystals$PThirdParty$Pdilithium_rounding.c
 
 $(OBJDIR)$Pkyber_ntt$O: src$Pcrystals$PThirdParty$Pkyber_ntt.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pkyber_ntt$O src$Pcrystals$PThirdParty$Pkyber_ntt.c
@@ -1064,6 +1015,24 @@ $(OBJDIR)$Prsa_pss_sig_unpad$O: src$Prsa$Prsa_pss_sig_unpad.c $(HEADERSPRIV)
 $(OBJDIR)$Prsa_ssl_decrypt$O: src$Prsa$Prsa_ssl_decrypt.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_ssl_decrypt$O src$Prsa$Prsa_ssl_decrypt.c
 
+$(OBJDIR)$Psphincs_default_keygen$O: src$Psphincs-shake256$Psphincs_default_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_keygen$O src$Psphincs-shake256$Psphincs_default_keygen.c
+
+$(OBJDIR)$Psphincs_default_sign$O: src$Psphincs-shake256$Psphincs_default_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_sign$O src$Psphincs-shake256$Psphincs_default_sign.c
+
+$(OBJDIR)$Psphincs_default_verify$O: src$Psphincs-shake256$Psphincs_default_verify.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_verify$O src$Psphincs-shake256$Psphincs_default_verify.c
+
+$(OBJDIR)$Psphincs_wrap_keygen$O: src$Psphincs-shake256$Psphincs_wrap_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_keygen$O src$Psphincs-shake256$Psphincs_wrap_keygen.c
+
+$(OBJDIR)$Psphincs_wrap_sign$O: src$Psphincs-shake256$Psphincs_wrap_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_sign$O src$Psphincs-shake256$Psphincs_wrap_sign.c
+
+$(OBJDIR)$Psphincs_wrap_verify$O: src$Psphincs-shake256$Psphincs_wrap_verify.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_verify$O src$Psphincs-shake256$Psphincs_wrap_verify.c
+
 $(OBJDIR)$Pprf$O: src$Pssl$Pprf.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pprf$O src$Pssl$Pprf.c
 
@@ -1076,8 +1045,8 @@ $(OBJDIR)$Pprf_sha256$O: src$Pssl$Pprf_sha256.c $(HEADERSPRIV)
 $(OBJDIR)$Pprf_sha384$O: src$Pssl$Pprf_sha384.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pprf_sha384$O src$Pssl$Pprf_sha384.c
 
-$(OBJDIR)$Pssl_ccert_single_dilithium$O: src$Pssl$Pssl_ccert_single_dilithium.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_ccert_single_dilithium$O src$Pssl$Pssl_ccert_single_dilithium.c
+$(OBJDIR)$Pssl_ccert_single_sphincs$O: src$Pssl$Pssl_ccert_single_sphincs.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_ccert_single_sphincs$O src$Pssl$Pssl_ccert_single_sphincs.c
 
 $(OBJDIR)$Pssl_ccert_single_ec$O: src$Pssl$Pssl_ccert_single_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_ccert_single_ec$O src$Pssl$Pssl_ccert_single_ec.c
@@ -1112,8 +1081,8 @@ $(OBJDIR)$Pssl_engine_default_chapol$O: src$Pssl$Pssl_engine_default_chapol.c $(
 $(OBJDIR)$Pssl_engine_default_descbc$O: src$Pssl$Pssl_engine_default_descbc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_descbc$O src$Pssl$Pssl_engine_default_descbc.c
 
-$(OBJDIR)$Pssl_engine_default_dilithium$O: src$Pssl$Pssl_engine_default_dilithium.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_dilithium$O src$Pssl$Pssl_engine_default_dilithium.c
+$(OBJDIR)$Pssl_engine_default_sphincs$O: src$Pssl$Pssl_engine_default_sphincs.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_sphincs$O src$Pssl$Pssl_engine_default_sphincs.c
 
 $(OBJDIR)$Pssl_engine_default_ec$O: src$Pssl$Pssl_engine_default_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_engine_default_ec$O src$Pssl$Pssl_engine_default_ec.c
@@ -1157,8 +1126,8 @@ $(OBJDIR)$Pssl_rec_chapol$O: src$Pssl$Pssl_rec_chapol.c $(HEADERSPRIV)
 $(OBJDIR)$Pssl_rec_gcm$O: src$Pssl$Pssl_rec_gcm.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_rec_gcm$O src$Pssl$Pssl_rec_gcm.c
 
-$(OBJDIR)$Pssl_scert_single_dilithium$O: src$Pssl$Pssl_scert_single_dilithium.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_scert_single_dilithium$O src$Pssl$Pssl_scert_single_dilithium.c
+$(OBJDIR)$Pssl_scert_single_sphincs$O: src$Pssl$Pssl_scert_single_sphincs.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_scert_single_sphincs$O src$Pssl$Pssl_scert_single_sphincs.c
 
 $(OBJDIR)$Pssl_scert_single_ec$O: src$Pssl$Pssl_scert_single_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_scert_single_ec$O src$Pssl$Pssl_scert_single_ec.c
@@ -1169,8 +1138,8 @@ $(OBJDIR)$Pssl_scert_single_rsa$O: src$Pssl$Pssl_scert_single_rsa.c $(HEADERSPRI
 $(OBJDIR)$Pssl_server$O: src$Pssl$Pssl_server.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_server$O src$Pssl$Pssl_server.c
 
-$(OBJDIR)$Pssl_server_full_dilithium$O: src$Pssl$Pssl_server_full_dilithium.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_server_full_dilithium$O src$Pssl$Pssl_server_full_dilithium.c
+$(OBJDIR)$Pssl_server_full_sphincs$O: src$Pssl$Pssl_server_full_sphincs.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_server_full_sphincs$O src$Pssl$Pssl_server_full_sphincs.c
 
 $(OBJDIR)$Pssl_server_full_ec$O: src$Pssl$Pssl_server_full_ec.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pssl_server_full_ec$O src$Pssl$Pssl_server_full_ec.c
@@ -1352,11 +1321,11 @@ $(OBJDIR)$Ppoly1305_i15$O: src$Psymcipher$Ppoly1305_i15.c $(HEADERSPRIV)
 $(OBJDIR)$Pasn1enc$O: src$Px509$Pasn1enc.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pasn1enc$O src$Px509$Pasn1enc.c
 
-$(OBJDIR)$Pencode_dilithium_pk8der$O: src$Px509$Pencode_dilithium_pk8der.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_dilithium_pk8der$O src$Px509$Pencode_dilithium_pk8der.c
+$(OBJDIR)$Pencode_sphincs_pk8der$O: src$Px509$Pencode_sphincs_pk8der.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_sphincs_pk8der$O src$Px509$Pencode_sphincs_pk8der.c
 
-$(OBJDIR)$Pencode_dilithium_rawder$O: src$Px509$Pencode_dilithium_rawder.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_dilithium_rawder$O src$Px509$Pencode_dilithium_rawder.c
+$(OBJDIR)$Pencode_sphincs_rawder$O: src$Px509$Pencode_sphincs_rawder.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_sphincs_rawder$O src$Px509$Pencode_sphincs_rawder.c
 
 $(OBJDIR)$Pencode_ec_pk8der$O: src$Px509$Pencode_ec_pk8der.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pencode_ec_pk8der$O src$Px509$Pencode_ec_pk8der.c

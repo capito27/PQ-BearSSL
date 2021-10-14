@@ -143,19 +143,14 @@ print_ec(const br_ec_public_key *pk, int print_text, int print_C)
 }
 
 static void
-print_dilithium(const br_dilithium_public_key *pk, int print_text, int print_C)
+print_sphincs(const br_sphincs_p_public_key *pk, int print_text, int print_C)
 {
 	if (print_text) {
 		size_t u;
 
-		printf("RHO = ");
-		for (u = 0; u < pk->rholen; u ++) {
-			printf("%02X", pk->rho[u]);
-		}
-		printf("\n");
-				printf("T1 = ");
-		for (u = 0; u < pk->t1len; u ++) {
-			printf("%02X", pk->t1[u]);
+		printf("K = ");
+		for (u = 0; u < pk->klen; u ++) {
+			printf("%02X", pk->k[u]);
 		}
 		printf("\n");
 		
@@ -164,8 +159,8 @@ print_dilithium(const br_dilithium_public_key *pk, int print_text, int print_C)
 	if (print_C) {
 		size_t u;
 
-		printf("\nstatic const unsigned char DLTHM_RHO[] = {");
-		for (u = 0; u < pk->rholen; u ++) {
+		printf("\nstatic const unsigned char SPHINCS_K[] = {");
+		for (u = 0; u < pk->klen; u ++) {
 			if (u != 0) {
 				printf(",");
 			}
@@ -174,25 +169,11 @@ print_dilithium(const br_dilithium_public_key *pk, int print_text, int print_C)
 			} else {
 				printf(" ");
 			}
-			printf("0x%02X", pk->rho[u]);
+			printf("0x%02X", pk->k[u]);
 		}
 		printf("\n};\n");
-		printf("\nstatic const unsigned char DLTHM_T1[] = {");
-		for (u = 0; u < pk->t1len; u ++) {
-			if (u != 0) {
-				printf(",");
-			}
-			if (u % 12 == 0) {
-				printf("\n\t");
-			} else {
-				printf(" ");
-			}
-			printf("0x%02X", pk->t1[u]);
-		}
-		printf("\n};\n");
-		printf("\nstatic const br_ec_public_key EC = {\n");
-		printf("\t(unsigned char *)DLTHM_RHO, sizeof DLTHM_RHO,\n");
-		printf("\t(unsigned char *)DLTHM_T1, sizeof DLTHM_T1,\n");
+		printf("\nstatic const br_sphincs_p_key SPHINCS = {\n");
+		printf("\t(unsigned char *)SPHINCS_K, sizeof SPHINCS_K,\n");
 		printf("\t%d,\n", pk->mode);
 		printf("};\n");
 	}
@@ -322,8 +303,8 @@ do_verify(int argc, char *argv[])
 	br_x509_minimal_set_rsa(&mc, &br_rsa_i31_pkcs1_vrfy);
 	br_x509_minimal_set_ecdsa(&mc,
 		&br_ec_prime_i31, &br_ecdsa_i31_vrfy_asn1);
-	br_x509_minimal_set_dilithium(&mc,
-		br_dilithium_vrfy_get_default());
+	br_x509_minimal_set_sphincs_p(&mc,
+		br_sphincs_p_vrfy_get_default());
 
 	mc.vtable->start_chain(&mc.vtable, sni);
 	for (u = 0; u < VEC_LEN(chain); u ++) {
@@ -388,12 +369,12 @@ do_verify(int argc, char *argv[])
 			}
 			print_ec(&pk->key.ec, print_text, print_C);
 			break;
-		case BR_KEYTYPE_DLTHM:
+		case BR_KEYTYPE_SPHINCS:
 			if (verbose) {
-				fprintf(stderr, "Key type: Dilithium (security mode %d)\n",
-					pk->key.dilithium.mode);
+				fprintf(stderr, "Key type: Sphincs (security mode %d)\n",
+					pk->key.sphincs_p.mode);
 			}
-			print_dilithium(&pk->key.dilithium, print_text, print_C);
+			print_sphincs(&pk->key.sphincs_p, print_text, print_C);
 			break;
 		default:
 			if (verbose) {

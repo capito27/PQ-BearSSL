@@ -89,12 +89,10 @@ xpkeydup(const br_x509_pkey *pk)
 		pk2->key.ec.q = xblobdup(pk->key.ec.q, pk->key.ec.qlen);
 		pk2->key.ec.qlen = pk->key.ec.qlen;
 		break;
-	case BR_KEYTYPE_DLTHM:
-		pk2->key.dilithium.mode = pk->key.dilithium.mode;
-		pk2->key.dilithium.rho= xblobdup(pk->key.dilithium.rho, pk->key.dilithium.rholen);
-		pk2->key.dilithium.rholen = pk->key.dilithium.rholen;
-		pk2->key.dilithium.t1= xblobdup(pk->key.dilithium.t1, pk->key.dilithium.t1len);
-		pk2->key.dilithium.t1len = pk->key.dilithium.t1len;
+	case BR_KEYTYPE_SPHINCS:
+		pk2->key.sphincs_p.mode = pk->key.sphincs_p.mode;
+		pk2->key.sphincs_p.k = xblobdup(pk->key.sphincs_p.k, pk->key.sphincs_p.klen);
+		pk2->key.sphincs_p.klen = pk->key.sphincs_p.klen;
 		break;
 	default:
 		fprintf(stderr, "Unknown public key type: %u\n",
@@ -117,9 +115,8 @@ xfreepkey(br_x509_pkey *pk)
 		case BR_KEYTYPE_EC:
 			xfree(pk->key.ec.q);
 			break;
-		case BR_KEYTYPE_DLTHM:
-			xfree(pk->key.dilithium.rho);
-			xfree(pk->key.dilithium.t1);
+		case BR_KEYTYPE_SPHINCS:
+			xfree(pk->key.sphincs_p.k);
 			break;
 		default:
 			fprintf(stderr, "Unknown public key type: %u\n",

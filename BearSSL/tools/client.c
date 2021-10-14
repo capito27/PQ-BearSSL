@@ -273,7 +273,7 @@ cc_choose(const br_ssl_client_certificate_class **pctx,
 			fprintf(stderr, "\n");
 		}
 		if ((auth_types >> 25) != 0) {
-			fprintf(stderr, "supported: Dilithium signatures:");
+			fprintf(stderr, "supported: Sphincs signatures:");
 			print_hashes(auth_types >> 25, hashes >> 25);
 			fprintf(stderr, "\n");
 		}
@@ -337,14 +337,14 @@ cc_choose(const br_ssl_client_certificate_class **pctx,
 			return;
 		}
 		break;
-	case BR_KEYTYPE_DLTHM:
+	case BR_KEYTYPE_SPHINCS:
 		if ((choices->hash_id = choose_hash(auth_types)) >= 0) {
 			if (zc->verbose) {
-				fprintf(stderr, "using Dilithium, hash = %d (%s)\n",
+				fprintf(stderr, "using Sphincs, hash = %d (%s)\n",
 					choices->hash_id,
 					hash_function_name(choices->hash_id));
 			}
-			choices->auth_type = BR_AUTH_DILITHIUM;
+			choices->auth_type = BR_AUTH_SPHINCS;
 			choices->chain = zc->chain;
 			choices->chain_len = zc->chain_len;
 			return;
@@ -392,8 +392,6 @@ cc_do_sign(const br_ssl_client_certificate_class **pctx,
 		const unsigned char *hash_oid;
 		uint32_t x;
 		size_t sig_len;
-		br_hmac_drbg_context rng;
-		br_prng_seeder seeder;
 
 	case BR_KEYTYPE_RSA:
 		hash_oid = get_hash_oid(hash_id);
@@ -454,41 +452,30 @@ cc_do_sign(const br_ssl_client_certificate_class **pctx,
 		}
 		return sig_len;
 
-	case BR_KEYTYPE_DLTHM:
+	case BR_KEYTYPE_SPHINCS:
 		hc = get_hash_impl(hash_id);
 		if (hc == NULL) {
 			if (zc->verbose) {
-				fprintf(stderr, "ERROR: cannot Dilithium-sign with"
+				fprintf(stderr, "ERROR: cannot Sphincs-sign with"
 					" unknown hash function: %d\n",
 					hash_id);
 			}
 			return 0;
 		}
-		if (len < BR_DILITHIUM_SIGNATURE_SIZE(zc->sk->key.dilithium.mode)) {
+		if (len < BR_SPHINCS_P_SIGNATURE_SIZE(zc->sk->key.sphincs_p.mode)) {
 			if (zc->verbose) {
-				fprintf(stderr, "ERROR: cannot Dilithium-sign"
+				fprintf(stderr, "ERROR: cannot Sphincs-sign"
 					" (output buffer = %lu, required size = %lu)\n",
 					(unsigned long)len, 
-					(unsigned long)BR_DILITHIUM_SIGNATURE_SIZE(zc->sk->key.dilithium.mode));
+					(unsigned long)BR_SPHINCS_P_SIGNATURE_SIZE(zc->sk->key.sphincs_p.mode));
 			}
 			return 0;
 		}
-		// Seed the drbg
-		seeder = br_prng_seeder_system(NULL);
-		if (seeder == 0) {
-			fprintf(stderr, "ERROR: no system source of randomness\n");
-			return 0;
-		}
-		br_hmac_drbg_init(&rng, &br_sha256_vtable, NULL, 0);
-		if (!seeder(&rng.vtable)) {
-			fprintf(stderr, "ERROR: system source of randomness failed\n");
-			return 0;
-		}
-		sig_len = br_dilithium_sign_get_default()(
-			&rng.vtable, &zc->sk->key.dilithium, data, len, hv, hv_len);
+		sig_len = br_sphincs_p_sign_get_default()(
+			&zc->sk->key.sphincs_p, data, len, hv, hv_len);
 		if (sig_len == 0) {
 			if (zc->verbose) {
-				fprintf(stderr, "ERROR: Dilithium-sign failure\n");
+				fprintf(stderr, "ERROR: Sphincs-sign failure\n");
 			}
 			return 0;
 		}
@@ -1039,9 +1026,9 @@ do_client(int argc, char *argv[])
 		if ((req & REQ_ECDH) != 0) {
 			br_ssl_engine_set_default_ec(&cc.eng);
 		}
-		if ((req & REQ_KYBER_DLTHM) != 0) {
+		if ((req & REQ_KYBER_SPHINCS) != 0) {
 			br_ssl_engine_set_default_kyber(&cc.eng);
-			br_ssl_engine_set_default_dilithium(&cc.eng);
+			br_ssl_engine_set_default_sphincs_p(&cc.eng);
 		}
 	}
 	if (fallback) {
@@ -1076,8 +1063,8 @@ do_client(int argc, char *argv[])
 	br_x509_minimal_set_rsa(&xc, br_rsa_pkcs1_vrfy_get_default());
 	br_x509_minimal_set_ecdsa(&xc,
 		br_ec_get_default(), br_ecdsa_vrfy_asn1_get_default());
-	br_x509_minimal_set_dilithium(&xc,
-		br_dilithium_vrfy_get_default());
+	br_x509_minimal_set_sphincs_p(&xc,
+		br_sphincs_p_vrfy_get_default());
 
 	/*
 	 * If there is no provided trust anchor, then certificate validation
@@ -1111,7 +1098,7 @@ do_client(int argc, char *argv[])
 		zc.chain = chain;
 		zc.chain_len = chain_len;
 		zc.sk = sk;
-		if (nostaticecdh || (sk->key_type != BR_KEYTYPE_EC && sk->key_type != BR_KEYTYPE_DLTHM)) {
+		if (nostaticecdh || (sk->key_type != BR_KEYTYPE_EC && sk->key_type != BR_KEYTYPE_SPHINCS)) {
 			zc.issuer_key_type = 0;
 		} else {
 			zc.issuer_key_type = get_cert_signer_algo(&chain[0]);

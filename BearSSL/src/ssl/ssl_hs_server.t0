@@ -495,10 +495,10 @@ verify_CV_sig(br_ssl_server_context *ctx, size_t sig_len)
 			return BR_ERR_BAD_SIGNATURE;
 		}
 	} else {
-		if (ctx->eng.idilithium == 0) {
+		if (ctx->eng.isphincs_p == 0) {
 			return BR_ERR_BAD_SIGNATURE;
 		}
-		if (!ctx->eng.idilithium(&pk->key.dilithium,
+		if (!ctx->eng.isphincs_p(&pk->key.sphincs_p,
 			ctx->hash_CV, ctx->hash_CV_len,
 			ctx->eng.pad, sig_len))
 		{
@@ -986,7 +986,7 @@ cc: save-session ( -- ) {
 	\ set if ECDHE_ECDSA is possible.
 	dup dup 0xFF and 0<> neg
 	swap 8 >> 0<> 2 and or 12 << { can-ecdhe }
-	28 >> 0 <> { can-dlthm }
+	28 >> 0 <> { can-sphincs }
 
 	\ Filter supported curves. If there is no common curve between
 	\ client and us, then ECDHE suites cannot be used. Note that we
@@ -1013,7 +1013,7 @@ cc: save-session ( -- ) {
 	\ suites are filtered out. In particular:
 	\ -- ECDHE suites are removed if there is no common hash function
 	\    (for the relevant signature algorithm) or no common curve.
-	\ -- KYBER_DLTHM suites are removed if there is no common hash function.
+	\ -- KYBER_SPHINCS suites are removed if there is no common hash function.
 	\ -- TLS-1.2-only suites are removed if the negotiated version is
 	\    TLS-1.1 or lower.
 	addr-client_suites dup >css-off
@@ -1025,9 +1025,9 @@ cc: save-session ( -- ) {
 				2drop 0 dup
 			then
 		then
-		\ If dilithium suite
+		\ If sphincs suite
 		dup 12 >> 5 = if
-			can-dlthm  ifnot
+			can-sphincs  ifnot
 				2drop 0 dup
 			then
 		then
@@ -1151,7 +1151,7 @@ cc: do-ecdhe-part1 ( curve -- len ) {
 	T0_PUSHi(do_ecdhe_part1(CTX, curve));
 }
 
-\ Do the first part of Kyber based key exchange (with Dilithium signature over both the public key and ciphertext).
+\ Do the first part of Kyber based key exchange (with Sphincs signature over both the public key and ciphertext).
 \ Returned value is the computed signature length, or a negative error code on error.
 cc: do-kyber-kex-part1 ( -- len ) {
 	T0_PUSHi(do_kyber_kex_part1(CTX));
@@ -1165,7 +1165,7 @@ cc: do-kyber-kex-part1 ( -- len ) {
 
 \ Write the Server Key Exchange message (if applicable).
 : write-ServerKeyExchange ( -- )
-	addr-cipher_suite get16 dup use-ecdhe? swap use-kyber-dlthm? or ifnot ret then
+	addr-cipher_suite get16 dup use-ecdhe? swap use-kyber-sphincs? or ifnot ret then
 
 
 	\ If using TLS-1.2+, then the hash function and signature
@@ -1214,7 +1214,7 @@ cc: do-kyber-kex-part1 ( -- len ) {
 				0xFF and write8 \ Write the hash algorithm
 				\ Write the signature algorithm.
 				\ The byte on the wire shall be 1 for RSA,
-				\ 3 for ECDSA or 4 for Dilithium.
+				\ 3 for ECDSA or 4 for Sphincs.
 				addr-cipher_suite get16 get-key-exchange-signature-type write8
 			then
 		then
@@ -1223,14 +1223,14 @@ cc: do-kyber-kex-part1 ( -- len ) {
 		ecdhe-sig-len write16
 		addr-pad ecdhe-sig-len write-blob 
 
-	\ Otherwise, we assume a Kyber/Dilithium based key exchange
+	\ Otherwise, we assume a Kyber/Sphincs based key exchange
 	else 
 		\ Compute the ephemeral Kyber public key to send + signature
-		do-kyber-kex-part1 dup 0< if neg fail then { dilithium-sig-len }
+		do-kyber-kex-part1 dup 0< if neg fail then { sphincs-sig-len }
 
 		\ Write the type and length of the message
 		12 write8
-		dilithium-sig-len addr-kyber_ct_len get16 addr-kyber_pub_key_len get16 + + 9 + write24
+		sphincs-sig-len addr-kyber_ct_len get16 addr-kyber_pub_key_len get16 + + 9 + write24
 
 		\ "Curve type": type 0x04 without any further field.
 		4 write8
@@ -1250,9 +1250,9 @@ cc: do-kyber-kex-part1 ( -- len ) {
 			addr-cipher_suite get16 get-key-exchange-signature-type write8 \ signature type
 		then
 	
-		\ Ciphertext Dilithium Signature.
-		dilithium-sig-len write16
-		addr-pad dilithium-sig-len write-blob 
+		\ Ciphertext Sphincs Signature.
+		sphincs-sig-len write16
+		addr-pad sphincs-sig-len write-blob 
 
 		\ Kyber own public key 
 		addr-kyber_pub_key_len get16 dup write16
@@ -1288,7 +1288,7 @@ cc: ta-names-total-length ( -- len ) {
 	then
 	supports-rsa-sign? if 1+ over if 1 write8 then then
 	supports-ecdsa? if 1+ over if 64 write8 then then
-	supports-dilithium? if 1+ over if 99 write8 then then
+	supports-sphincs? if 1+ over if 99 write8 then then
 	swap drop ;
 
 : write-signhash-inner2 ( dow algo hashes len id -- dow algo hashes len )
@@ -1326,9 +1326,9 @@ cc: ta-names-total-length ( -- len ) {
 		3 supported-hash-functions drop
 		write-signhash-inner1 len + >len
 	then
-	supports-dilithium? if
+	supports-sphincs? if
 		4 supported-hash-functions drop
-		\ For dilithium, we don't actually support sha1, so mask it off from the supported list
+		\ For Sphincs, we don't actually support sha1, so mask it off from the supported list
 		0xFB and
 		write-signhash-inner1 len + >len
 	then
@@ -1380,9 +1380,9 @@ cc: copy-dn-chunk ( -- len ) {
 	\    ecdsa_sign (64)
 	\    rsa_fixed_ecdh (65)
 	\    ecdsa_fixed_ecdh (66)
-	\    dilithium_sign (99)     Custom new authentication type
-	\ rsa_sign, ecdsa_sign and dilithium sign require, respectively, 
-	\ RSA, ECDSA and Dilithium support. Static ECDH requires that the
+	\    sphincs_sign (99)     Custom new authentication type
+	\ rsa_sign, ecdsa_sign and sphincs_sign require, respectively, 
+	\ RSA, ECDSA and Sphincs support. Static ECDH requires that the
 	\ cipher suite is ECDH. When we ask for static ECDH, we always 
 	\ send both rsa_fixed_ecdh and ecdsa_fixed_ecdh because what matters
 	\ there is what the X.509 engine may support, and we do not control that.
@@ -1482,7 +1482,7 @@ cc: do-static-ecdh ( prf_id -- ) {
 		addr-pad swap read-blob
 		enc-rsa-len addr-cipher_suite get16 prf-id do-rsa-decrypt
 	then
-	addr-cipher_suite get16 use-kyber-dlthm? if
+	addr-cipher_suite get16 use-kyber-sphincs? if
 			\ Kyber based key exchange : we expect a Kyber ciphertext
 			read16
 			dup 1568 > if ERR_LIMIT_EXCEEDED fail then \ Max supported Kyber Ciphertext length
@@ -1585,8 +1585,8 @@ cc: verify-CV-sig ( sig-len -- err ) {
 	addr-cipher_suite get16 get-key-exchange-signature-type { sig-alg }
 	addr-version get16 0x0303 >= if
 		\ Get hash function, then signature algorithm. The
-		\ signature algorithm is 1 (RSA), 3 (ECDSA) or 4 (Dilithium) while our
-		\ symbolic constants for key types are 1 (RSA), 2 (EC) or 3 (Dilithium).
+		\ signature algorithm is 1 (RSA), 3 (ECDSA) or 4 (Sphincs) while our
+		\ symbolic constants for key types are 1 (RSA), 2 (EC) or 3 (Sphincs).
 		read16
 		dup 0xFF and sig-alg = ifnot
 			ERR_BAD_SIGNATURE fail
@@ -1605,7 +1605,7 @@ cc: verify-CV-sig ( sig-len -- err ) {
 
 	\ Read signature.
 	read16 dup { sig-len }
-	dup 3366 > if ERR_LIMIT_EXCEEDED fail then
+	dup 49856 > if ERR_LIMIT_EXCEEDED fail then
 	addr-pad swap read-blob
 	sig-len verify-CV-sig
 	dup if fail then drop

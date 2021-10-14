@@ -919,9 +919,8 @@ free_key(void *value)
 	case BR_KEYTYPE_EC:
 		xfree((void *)pk->key.ec.q);
 		break;
-	case BR_KEYTYPE_DLTHM:
-		xfree((void *)pk->key.dilithium.rho);
-		xfree((void *)pk->key.dilithium.t1);
+	case BR_KEYTYPE_SPHINCS:
+		xfree((void *)pk->key.sphincs_p.k);
 		break;
 	default:
 		fprintf(stderr, "unknown key type: %d\n", pk->key_type);
@@ -1184,17 +1183,15 @@ parse_object(char *objtype, HT *objdata, long linenum)
 			pk->key.ec.curve = curve;
 			pk->key.ec.q = parse_hex("public point", linenum,
 				sq, &pk->key.ec.qlen);
-		} else if (eqstring(stype, "DILITHIUM")) {
-			char *srho, *st1;
+		} else if (eqstring(stype, "SPHINCS")) {
+			char *sk;
 
-			srho = get_value(objtype, objdata, linenum, "rho");
-			st1 = get_value(objtype, objdata, linenum, "t1");
-			pk->key_type = BR_KEYTYPE_DLTHM;
-			pk->key.dilithium.rho = parse_hex("rho", linenum,
-				srho, &pk->key.dilithium.rholen);
-			pk->key.dilithium.t1 = parse_hex("t1", linenum,
-				st1, &pk->key.dilithium.t1len);
-			pk->key.dilithium.mode = BR_DILITHIUM_PUBLIC_KEY_MODE(pk->key.dilithium.t1len + pk->key.dilithium.rholen);
+			sk = get_value(objtype, objdata, linenum, "k");
+			pk->key_type = BR_KEYTYPE_SPHINCS;
+			pk->key.sphincs_p.k = parse_hex("k", linenum,
+				sk, &pk->key.sphincs_p.klen);
+			pk->key.sphincs_p.mode = *pk->key.sphincs_p.k;
+			pk->key.sphincs_p.k++;
 		} else {
 			fprintf(stderr, "unknown key type '%s' (line %ld)\n",
 				stype, linenum);
@@ -1247,8 +1244,8 @@ parse_object(char *objtype, HT *objdata, long linenum)
 			tc.key_type_usage = BR_KEYTYPE_RSA;
 		} else if (eqstring(ktype, "EC")) {
 			tc.key_type_usage = BR_KEYTYPE_EC;
-		} else if (eqstring(ktype, "DILITHIUM")) {
-			tc.key_type_usage = BR_KEYTYPE_DLTHM;
+		} else if (eqstring(ktype, "SPHINCS")) {
+			tc.key_type_usage = BR_KEYTYPE_SPHINCS;
 		} else {
 			fprintf(stderr,
 				"unknown key type: '%s' (line %ld)\n",
@@ -1444,14 +1441,11 @@ eqpkey(const br_x509_pkey *pk1, const br_x509_pkey *pk2)
 			&& pk1->key.ec.qlen == pk2->key.ec.qlen
 			&& memcmp(pk1->key.ec.q,
 				pk2->key.ec.q, pk1->key.ec.qlen) == 0;
-	case BR_KEYTYPE_DLTHM:
-		return pk1->key.dilithium.mode == pk2->key.dilithium.mode
-			&& pk1->key.dilithium.rholen == pk2->key.dilithium.rholen
-			&& memcmp(pk1->key.dilithium.rho,
-				pk2->key.dilithium.rho, pk1->key.dilithium.rholen) == 0
-			&& pk1->key.dilithium.t1len == pk2->key.dilithium.t1len
-			&& memcmp(pk1->key.dilithium.t1,
-				pk2->key.dilithium.t1, pk1->key.dilithium.t1len) == 0;
+	case BR_KEYTYPE_SPHINCS:
+		return pk1->key.sphincs_p.mode == pk2->key.sphincs_p.mode
+			&& pk1->key.sphincs_p.klen == pk2->key.sphincs_p.klen
+			&& memcmp(pk1->key.sphincs_p.k,
+				pk2->key.sphincs_p.k, pk1->key.sphincs_p.klen) == 0;
 	default:
 		fprintf(stderr, "unknown key type: %d\n", pk1->key_type);
 		exit(EXIT_FAILURE);
@@ -1559,8 +1553,8 @@ run_test_case(test_case *tc)
 	br_x509_minimal_set_rsa(&ctx, br_rsa_pkcs1_vrfy_get_default());
 	br_x509_minimal_set_ecdsa(&ctx,
 		br_ec_get_default(), br_ecdsa_vrfy_asn1_get_default());
-	br_x509_minimal_set_dilithium(&ctx,
-		br_dilithium_vrfy_get_default());
+	br_x509_minimal_set_sphincs_p(&ctx,
+		br_sphincs_p_vrfy_get_default());
 
 	/*
 	 * Set the validation date.
@@ -1849,8 +1843,8 @@ test_name_extraction(void)
 	br_x509_minimal_set_rsa(&ctx, br_rsa_pkcs1_vrfy_get_default());
 	br_x509_minimal_set_ecdsa(&ctx,
 		br_ec_get_default(), br_ecdsa_vrfy_asn1_get_default());
-	br_x509_minimal_set_dilithium(&ctx,
-		 br_dilithium_vrfy_get_default());
+	br_x509_minimal_set_sphincs_p(&ctx,
+		 br_sphincs_p_vrfy_get_default());
 	string_to_time(DEFAULT_TIME, &days, &seconds);
 	br_x509_minimal_set_time(&ctx, days, seconds);
 

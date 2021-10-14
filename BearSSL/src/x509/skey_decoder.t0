@@ -122,10 +122,12 @@ cc: set-ec-key ( curve xlen -- ) {
 	CTX->key.ec.xlen = xlen;
 }
 
-\ Set the private key (Dilithium).
-cc: set-dilithium-key ( klen -- ) {
+\ Set the private key (Sphincs).
+cc: set-sphincs-key ( klen -- ) {
 	size_t klen = T0_POP();
-	br_dilithium_keygen_load_private_key(CTX->key_data, klen, &CTX->key.dilithium);
+	CTX->key.sphincs_p.k = CTX->key_data+1;
+	CTX->key.sphincs_p.klen = klen - 1;
+	CTX->key.sphincs_p.mode = *CTX->key_data;
 }
 
 \ Get the bit length for an integer (unsigned).
@@ -260,8 +262,8 @@ cc: set-dilithium-key ( klen -- ) {
 	\ The caller will close the sequence.
 	;
 
-\ Decode a Dilithium key, starting with the SEQUENCE tag.
-: decode-DLTHM ( lim -- lim )
+\ Decode a Sphincs key, starting with the SEQUENCE tag.
+: decode-SPHINCS ( lim -- lim )
 	read-sequence-open
 
 	\ Version should be 1.
@@ -270,16 +272,16 @@ cc: set-dilithium-key ( klen -- ) {
 	then
 
 	\ Read tag for the private key; should be OCTET STRING. Then use the
-	\ decode-DLTHM-next function for the remainder of the key.
+	\ decode-SPHINCS-next function for the remainder of the key.
 	read-tag 0x04 check-tag-primitive
-	decode-DLTHM-next
+	decode-SPHINCS-next
 
 	\ Close the SEQUENCE.
 	close-elt ;
 
-\ Decode a Dilithium key; the version, and the tag for the OCTET STRING, have
+\ Decode a Sphincs key; the version, and the tag for the OCTET STRING, have
 \ already been read
-: decode-DLTHM-next ( lim -- lim )
+: decode-SPHINCS-next ( lim -- lim )
 	\ Read the private key proper.
 	read-length-open-elt
 	dup dup { klen } len-key_data > if ERR_X509_UNSUPPORTED fail then
@@ -288,8 +290,8 @@ cc: set-dilithium-key ( klen -- ) {
 	\ skip the remaining bytes (public key)
 	skip-remaining
 
-	\ Set the Dilithium key.
-	klen set-dilithium-key
+	\ Set the Sphincs key.
+	klen set-sphincs-key
 
 	\ The caller will close the sequence.
 	;
@@ -300,7 +302,7 @@ cc: set-dilithium-key ( klen -- ) {
 	\ Decode the AlgorithmIdentifier.
 	read-length-open-elt
 	read-OID ifnot ERR_X509_UNSUPPORTED fail then
-	{ ; key-type curve } \ 0 = rsa, 1 = EC, 2 = Dilithium
+	{ ; key-type curve } \ 0 = rsa, 1 = EC, 2 = Sphincs
 	choice
 		rsaEncryption eqOID uf
 			\ RSA private key. We ignore the parameters.
@@ -312,8 +314,8 @@ cc: set-dilithium-key ( klen -- ) {
 			1 >key-type
 			dup if read-curve-ID else 0 then >curve
 		enduf
-		id-dilithiumPublicKey eqOID uf
-			\ Dilithium private key. We ignore the parameters.
+		id-sphincsPublicKey eqOID uf
+			\ Sphincs private key. We ignore the parameters.
 			skip-remaining 2 >key-type
 		enduf
 
@@ -330,7 +332,7 @@ cc: set-dilithium-key ( klen -- ) {
 		key-type = 1 if
 			curve decode-EC
 		else
-			decode-DLTHM
+			decode-SPHINCS
 		then
 	then
 	close-elt
@@ -345,7 +347,7 @@ cc: set-dilithium-key ( klen -- ) {
 		key-type = 1 if
 			KEYTYPE_EC
 		else
-			KEYTYPE_DLTHM
+			KEYTYPE_SPHINCS
 		then
 	then
 	;
@@ -381,9 +383,9 @@ cc: set-dilithium-key ( klen -- ) {
 	\ contents are the unsigned big-endian encoding of the key value,
 	\ which is exactly what we want.
 	\
-	\ Custom Dilithium private key format is defined similarly to the 
+	\ Custom Sphincs private key format is defined similarly to the 
 	\ EC private key formatin RFC 5915:
-	\   DilithiumPrivateKey ::= SEQUENCE {
+	\   SphincsPrivateKey ::= SEQUENCE {
 	\       version        INTEGER,   -- always 0
 	\       privateKey     OCTET STRING,
 	\       publicKey      BIT STRING OPTIONAL
@@ -410,8 +412,8 @@ cc: set-dilithium-key ( klen -- ) {
 	\ All our schemas begin with a small INTEGER which is either 0 or
 	\ 1. We don't care which it is.
 
-	\ HACK for Dilithium raw private key detection, which shares its 
-	\ privateKey data type with EC keys, the integer for Dilithium keys
+	\ HACK for Sphincs raw private key detection, which shares its 
+	\ privateKey data type with EC keys, the integer for Sphincs keys
 	\ will be always 0, whereas the integer for EC keys is already always
 	\ 1, thus this integer can be used to differentiate between the two key
 	\ types, in an attempt to not have to substantially rework the logic 
@@ -421,17 +423,17 @@ cc: set-dilithium-key ( klen -- ) {
 	then
 
 	\ Get next tag: it should be either an INTEGER (RSA private key),
-	\ an OCTET STRING (EC private key or Dilithium private key), 
+	\ an OCTET STRING (EC private key or Sphincs private key), 
 	\ or a SEQUENCE (for an AlgorithmIdentifier, in a PKCS#8 object).
 	
-	\ To differentiate between EC and Dilithium private keys, the previous 
+	\ To differentiate between EC and Sphincs private keys, the previous 
 	\ small integer value is used since it has been made to always be different
 	0 = if 
-		\ In this situation we're working with a potential Dilithium key
+		\ In this situation we're working with a potential Sphincs key
 		read-tag
 		case
 			0x02 of check-primitive decode-RSA-next KEYTYPE_RSA endof
-			0x04 of check-primitive decode-DLTHM-next KEYTYPE_DLTHM endof
+			0x04 of check-primitive decode-SPHINCS-next KEYTYPE_SPHINCS endof
 			0x10 of check-constructed decode-PKCS8-next endof
 			ERR_X509_UNSUPPORTED fail
 		endcase

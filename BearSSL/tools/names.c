@@ -47,10 +47,10 @@ const hash_function hash_functions[] = {
 /* see brssl.h */
 const cipher_suite cipher_suites[] = {
 	{
-		"KYBR_DLTHM_WITH_CHACHA20_POLY1305_SHA256",
-		BR_TLS_KYBR_DLTHM_WITH_CHACHA20_POLY1305_SHA256,
-		REQ_KYBER_DLTHM | REQ_CHAPOL | REQ_SHA256 | REQ_TLS12,
-		"Kyber with Dilithium, ChaCha20+Poly1305 encryption (TLS 1.2+)"
+		"KYBR_SPHINCS_WITH_CHACHA20_POLY1305_SHA256",
+		BR_TLS_KYBR_SPHINCS_WITH_CHACHA20_POLY1305_SHA256,
+		REQ_KYBER_SPHINCS | REQ_CHAPOL | REQ_SHA256 | REQ_TLS12,
+		"Kyber with SPHINCS+, ChaCha20+Poly1305 encryption (TLS 1.2+)"
 	},
 	{
 		"ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
@@ -531,8 +531,8 @@ static const struct {
 		(const void *(*)(void))&br_ec_p256_m62_get },
 	{ "ec_p256_m64",          "m64",
 		(const void *(*)(void))&br_ec_p256_m64_get },
-	{ "dilithium_third_party_vrfy","tp",
-		(const void *(*)(void))&br_dilithium_third_party_vrfy },
+	{ "sphincs_p_third_party_vrfy","tp",
+		(const void *(*)(void))&br_sphincs_p_third_party_vrfy },
 	{ "kyber_third_party",    "tp",
 		(const void *(*)(void))&br_kyber_third_party_keygen },
 	{ 0, 0, 0, }

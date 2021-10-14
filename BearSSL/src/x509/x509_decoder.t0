@@ -127,11 +127,14 @@ cc: copy-ec-pkey ( curve qlen -- ) {
 	CTX->pkey.key.ec.qlen = qlen;
 }
 
-\ Copy the public key (Dilithium) to the permanent buffer.
-cc: copy-dilithium-pkey ( klen -- ) {
+\ Copy the public key (Sphincs) to the permanent buffer.
+cc: copy-sphincs-pkey ( klen -- ) {
 	size_t klen = T0_POP();
-	CTX->pkey.key_type = BR_KEYTYPE_DLTHM;
-	br_dilithium_keygen_load_public_key(CTX->pkey_data, klen, &CTX->pkey.key.dilithium);
+	CTX->pkey.key_type = BR_KEYTYPE_SPHINCS;
+
+	CTX->pkey.key.sphincs_p.k = CTX->pkey_data+1;
+	CTX->pkey.key.sphincs_p.klen = klen - 1;
+	CTX->pkey.key.sphincs_p.mode = *CTX->pkey_data;
 }
 
 \ Extensions with specific processing.
@@ -240,8 +243,8 @@ OID: basicConstraints    2.5.29.19
 			curve qlen copy-ec-pkey
 		enduf
 
-		\ Dilithium public key.
-		id-dilithiumPublicKey eqOID uf
+		\ Sphincs public key.
+		id-sphincsPublicKey eqOID uf
 			skip-close-elt
 			\ Public key itself: the BIT STRING contains bytes
 			\ (no partial byte) and these bytes encode the
@@ -252,7 +255,7 @@ OID: basicConstraints    2.5.29.19
 				ERR_X509_LIMIT_EXCEEDED fail
 			then
 			read-blob
-			klen copy-dilithium-pkey
+			klen copy-sphincs-pkey
 		enduf
 		ERR_X509_UNSUPPORTED fail
 	endchoice
@@ -317,10 +320,10 @@ OID: basicConstraints    2.5.29.19
 			ecdsa-with-SHA384        eqOID uf 5 KEYTYPE_EC enduf
 			ecdsa-with-SHA512        eqOID uf 6 KEYTYPE_EC enduf
 
-			dilithium-with-SHA224    eqOID uf 3 KEYTYPE_DLTHM enduf
-			dilithium-with-SHA256    eqOID uf 4 KEYTYPE_DLTHM enduf
-			dilithium-with-SHA384    eqOID uf 5 KEYTYPE_DLTHM enduf
-			dilithium-with-SHA512    eqOID uf 6 KEYTYPE_DLTHM enduf
+			sphincs-with-SHA224      eqOID uf 3 KEYTYPE_SPHINCS enduf
+			sphincs-with-SHA256      eqOID uf 4 KEYTYPE_SPHINCS enduf
+			sphincs-with-SHA384      eqOID uf 5 KEYTYPE_SPHINCS enduf
+			sphincs-with-SHA512      eqOID uf 6 KEYTYPE_SPHINCS enduf
 
 			0 0
 		endchoice

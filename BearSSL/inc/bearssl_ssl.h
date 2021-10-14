@@ -1023,8 +1023,8 @@ typedef struct {
 	/*
 	 * Context variables for the handshake processor. The 'pad' must
 	 * be large enough to accommodate an RSA-encrypted pre-master
-	 * secret, or an RSA signature, or a Dilithium signature; since we want to support up to
-	 * Dilithium-4, this means at least 3366 bytes. (Other pad usages
+	 * secret, or an RSA signature, or a Sphincs signature; since we want to support up to
+	 * Sphincs_shake256_256f, this means at least 49856 bytes. (Other pad usages
 	 * require its length to be at least 512.)
 	 */
 	struct {
@@ -1034,7 +1034,7 @@ typedef struct {
 	} cpu;
 	uint32_t dp_stack[32];
 	uint32_t rp_stack[32];
-	unsigned char pad[3366];
+	unsigned char pad[50000];
 	unsigned char *hbuf_in, *hbuf_out, *saved_hbuf_out;
 	size_t hlen_in, hlen_out;
 	void (*hsrun)(void *ctx);
@@ -1135,7 +1135,7 @@ typedef struct {
 	const br_ec_impl *iec;
 	br_rsa_pkcs1_vrfy irsavrfy;
 	br_ecdsa_vrfy iecdsa;
-	br_dilithium_vrfy idilithium;
+	br_sphincs_p_vrfy isphincs_p;
 	br_kyber_decrypt ikyber_dec;
     br_kyber_encrypt ikyber_enc;
     br_kyber_keygen ikyber_kgn;
@@ -1878,45 +1878,45 @@ br_ssl_engine_get_kyber_keygen(br_ssl_engine_context *cc)
 }
 
 /**
- * \brief Set the Dilithium implementation (signature verification).
+ * \brief Set the Sphincs implementation (signature verification).
  *
  * On the client, this is used to verify the server's signature on its
- * ServerKeyExchange message (for KYBR_DLTHM cipher suites). On the server,
+ * ServerKeyExchange message (for KYBR_SPHINCS cipher suites). On the server,
  * this is used to verify the client's CertificateVerify message (if a
- * client certificate is requested, that certificate contains an Dilithium key,
+ * client certificate is requested, that certificate contains an Sphincs key,
  * and full-static ECDH is not used).
  *
  *
  * \param cc       client context.
- * \param iecdsa   Dilithium verification implementation.
+ * \param iecdsa   Sphincs verification implementation.
  */
 static inline void
-br_ssl_engine_set_dilithium(br_ssl_engine_context *cc, br_dilithium_vrfy idilithium)
+br_ssl_engine_set_sphincs_p(br_ssl_engine_context *cc, br_sphincs_p_vrfy isphincs_p)
 {
-	cc->idilithium = idilithium;
+	cc->isphincs_p = isphincs_p;
 }
 
 /**
- * \brief Set the "default" Dilithium implementation (signature verification).
+ * \brief Set the "default" Sphincs implementation (signature verification).
  *
- * This function sets the Dilithium implementation (signature verification)
+ * This function sets the Sphincs implementation (signature verification)
  * to the fastest implementation available on the current platform.
  *
  * \param cc   SSL engine context.
  */
-void br_ssl_engine_set_default_dilithium(br_ssl_engine_context *cc);
+void br_ssl_engine_set_default_sphincs_p(br_ssl_engine_context *cc);
 
 /**
- * \brief Get the Dilithium implementation (signature verification) configured
+ * \brief Get the Sphincs implementation (signature verification) configured
  * in the provided engine.
  *
  * \param cc   SSL engine context.
- * \return  the Dilithium signature verification implementation.
+ * \return  the Sphincs signature verification implementation.
  */
-static inline br_dilithium_vrfy
-br_ssl_engine_get_dilithium(br_ssl_engine_context *cc)
+static inline br_sphincs_p_vrfy
+br_ssl_engine_get_sphincs_p(br_ssl_engine_context *cc)
 {
-	return cc->idilithium;
+	return cc->isphincs_p;
 }
 
 /**
@@ -2428,7 +2428,7 @@ typedef struct {
 	 *
 	 * This is either `BR_AUTH_RSA` (RSA signature), `BR_AUTH_ECDSA`
 	 * (ECDSA signature), `BR_AUTH_ECDH` (static ECDH key exchange),
-	 * `BR_AUTH_DILITHIUM` (Dilithium signature)
+	 * `BR_AUTH_SPHINCS` (Sphincs signature)
 	 */
 	int auth_type;
 
@@ -2479,8 +2479,8 @@ typedef struct {
 #define BR_AUTH_RSA     1
 /** \brief Client authentication type: ECDSA signature. */
 #define BR_AUTH_ECDSA   3
-/** \brief Client authentication type: Dilithium signature (NON STANDARD). */
-#define BR_AUTH_DILITHIUM   4
+/** \brief Client authentication type: Sphincs signature (NON STANDARD). */
+#define BR_AUTH_SPHINCS   4
 
 /**
  * \brief Class type for a certificate handler (client side).
@@ -2586,7 +2586,7 @@ struct br_ssl_client_certificate_class_ {
 	 *   - If static ECDH is supported, with an ECDSA-signed certificate,
 	 *     then bit 17 is set.
 	 *
-	 *   - If DILITHIUM signatures with hash function x are supported,
+	 *   - If SPHINCS signatures with hash function x are supported,
 	 *     then bit 24+x is set.
 	 *
 	 * Notes:
@@ -2742,9 +2742,9 @@ typedef struct {
 } br_ssl_client_certificate_ec_context;
 
 /**
- * \brief A single-chain Dilithium client certificate handler.
+ * \brief A single-chain Sphincs client certificate handler.
  *
- * This handler uses a single certificate chain, with a Dilithium
+ * This handler uses a single certificate chain, with a Sphincs
  * signature. The list of trust anchor DN is ignored.
  *
  *
@@ -2757,12 +2757,12 @@ typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
     const br_x509_certificate *chain;
     size_t chain_len;
-    const br_dilithium_private_key *sk;
+    const br_sphincs_p_private_key *sk;
     unsigned issuer_key_type;
     const br_multihash_context *mhash;
-    br_dilithium_sign idilithium;
+    br_sphincs_p_sign isphincs_p;
 #endif
-} br_ssl_client_certificate_dilithium_context;
+} br_ssl_client_certificate_sphincs_p_context;
 
 /**
  * \brief Context structure for a SSL client.
@@ -2822,7 +2822,7 @@ struct br_ssl_client_context_ {
 		const br_ssl_client_certificate_class *vtable;
 		br_ssl_client_certificate_rsa_context single_rsa;
 		br_ssl_client_certificate_ec_context single_ec;
-		br_ssl_client_certificate_dilithium_context single_dilithium;
+		br_ssl_client_certificate_sphincs_p_context single_sphincs_p;
 	} client_auth;
 
 	/*
@@ -2845,7 +2845,7 @@ struct br_ssl_client_context_ {
  *   - If ECDSA is supported with hash function of ID `x`, then bit `8+x`
  *     is set.
  *
- *   - If DILITHIUM is supported with hash function of ID `x`, then bit
+ *   - If SPHINCS is supported with hash function of ID `x`, then bit
  *     `25+x` is set. (only algorithms with ID 3 to 6 are supported)
  *
  *   - Newer algorithms are symbolic 16-bit identifiers that do not
@@ -3105,11 +3105,11 @@ void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
 	const br_ec_impl *iec, br_ecdsa_sign iecdsa);
 
 /**
- * \brief Set the client certificate chain and key (single Dilithium case).
+ * \brief Set the client certificate chain and key (single Sphincs case).
  *
  * This function sets a client certificate chain, that the client will
  * send to the server whenever a client certificate is requested. This
- * certificate uses a Dilithium public key; the corresponding private key is
+ * certificate uses a Sphincs public key; the corresponding private key is
  * invoked for authentication. Trust anchor names sent by the server are
  * ignored.
  *
@@ -3119,7 +3119,7 @@ void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
  * again upon renegotiations.
  *
  * The `cert_issuer_key_type` value is one of `BR_KEYTYPE_RSA`,
- * `BR_KEYTYPE_EC` or `BR_KEYTYPE_DILITHIUM`; it is the type of the public
+ * `BR_KEYTYPE_EC` or `BR_KEYTYPE_SPHINCS`; it is the type of the public
  * key used by the CA that issued (signed) the client certificate.
  * (Note: when using TLS 1.2, this parameter is ignored; but its value
  * matters for TLS 1.0 and 1.1.)
@@ -3127,14 +3127,14 @@ void br_ssl_client_set_single_ec(br_ssl_client_context *cc,
  * \param cc                     server context.
  * \param chain                  server certificate chain to send.
  * \param chain_len              chain length (number of certificates).
- * \param sk                     server private key (Dilithium).
+ * \param sk                     server private key (Sphincs).
  * \param cert_issuer_key_type   issuing CA's key type.
- * \param iecdsa                 Dilithium signature implementation.
+ * \param iecdsa                 Sphincs signature implementation.
  */
-void br_ssl_client_set_single_dilithium(br_ssl_client_context *cc,
+void br_ssl_client_set_single_sphincs_p(br_ssl_client_context *cc,
                                         const br_x509_certificate *chain, size_t chain_len,
-                                        const br_dilithium_private_key *sk, unsigned cert_issuer_key_type,
-										br_dilithium_sign idilithium);
+                                        const br_sphincs_p_private_key *sk, unsigned cert_issuer_key_type,
+										br_sphincs_p_sign isphincs_p);
 
 /**
  * \brief Type for a "translated cipher suite", as an array of two
@@ -3147,14 +3147,14 @@ void br_ssl_client_set_single_dilithium(br_ssl_client_context *cc,
  *
  *   - Bits 12 to 15: key exchange + server key type
  *
- *     | val | symbolic constant        | suite type  | details                                                    |
- *     | :-- | :----------------------- | :---------- | :--------------------------------------------------------- |
- *     |  0  | `BR_SSLKEYX_RSA`         | RSA         | RSA key exchange, key is RSA (encryption)                  |
- *     |  1  | `BR_SSLKEYX_ECDHE_RSA`   | ECDHE_RSA   | ECDHE key exchange, key is RSA (signature)                 |
- *     |  2  | `BR_SSLKEYX_ECDHE_ECDSA` | ECDHE_ECDSA | ECDHE key exchange, key is EC (signature)                  |
- *     |  3  | `BR_SSLKEYX_ECDH_RSA`    | ECDH_RSA    | Key is EC (key exchange), cert signed with RSA             |
- *     |  4  | `BR_SSLKEYX_ECDH_ECDSA`  | ECDH_ECDSA  | Key is EC (key exchange), cert signed with ECDSA           |
- *     |  5  | `BR_SSLKEYX_KYBR_DLTHM`  | KYBR_DLTHM  | Ephemeral Kyber key exchange, key is Dilithium (signature) |
+ *     | val | symbolic constant         | suite type   | details                                                    |
+ *     | :-- | :------------------------ | :----------- | :--------------------------------------------------------- |
+ *     |  0  | `BR_SSLKEYX_RSA`          | RSA          | RSA key exchange, key is RSA (encryption)                  |
+ *     |  1  | `BR_SSLKEYX_ECDHE_RSA`    | ECDHE_RSA    | ECDHE key exchange, key is RSA (signature)                 |
+ *     |  2  | `BR_SSLKEYX_ECDHE_ECDSA`  | ECDHE_ECDSA  | ECDHE key exchange, key is EC (signature)                  |
+ *     |  3  | `BR_SSLKEYX_ECDH_RSA`     | ECDH_RSA     | Key is EC (key exchange), cert signed with RSA             |
+ *     |  4  | `BR_SSLKEYX_ECDH_ECDSA`   | ECDH_ECDSA   | Key is EC (key exchange), cert signed with ECDSA           |
+ *     |  5  | `BR_SSLKEYX_KYBR_SPHINCS` | KYBR_SPHINCS | Ephemeral Kyber key exchange, key is Sphincs (signature)  |
  *
  *   - Bits 8 to 11: symmetric encryption algorithm
  *
@@ -3200,7 +3200,7 @@ typedef uint16_t br_suite_translated[2];
 #define BR_SSLKEYX_ECDHE_ECDSA   2
 #define BR_SSLKEYX_ECDH_RSA      3
 #define BR_SSLKEYX_ECDH_ECDSA    4
-#define BR_SSLKEYX_KYBR_DLTHM    5
+#define BR_SSLKEYX_KYBR_SPHINCS  5
 
 #define BR_SSLENC_3DES_CBC       0
 #define BR_SSLENC_AES128_CBC     1
@@ -3318,7 +3318,7 @@ struct br_ssl_server_policy_class_ {
 	 * This callback function shall fill the provided `choices`
 	 * structure with the policy choices for this connection. This
 	 * entails selecting the cipher suite, hash function for signing
-	 * the ServerKeyExchange (applicable only to ECDHE and DILITHIUM
+	 * the ServerKeyExchange (applicable only to ECDHE and Sphincs
 	 * cipher suites), and certificate chain to send.
 	 *
 	 * The callback receives a pointer to the server context that
@@ -3498,9 +3498,9 @@ typedef struct {
 } br_ssl_server_policy_ec_context;
 
 /**
- * \brief A single-chain Dilithium policy handler.
+ * \brief A single-chain Sphincs policy handler.
  *
- * This policy context uses a single certificate chain, and a Dilithium
+ * This policy context uses a single certificate chain, and a Sphincs
  * private key.
  *
  * Apart from the first field (vtable pointer), its contents are
@@ -3512,11 +3512,11 @@ typedef struct {
 #ifndef BR_DOXYGEN_IGNORE
 	const br_x509_certificate *chain;
 	size_t chain_len;
-	const br_dilithium_private_key *sk;
+	const br_sphincs_p_private_key *sk;
 	const br_multihash_context *mhash;
-	br_dilithium_sign idilithium;
+	br_sphincs_p_sign isphincs_p;
 #endif
-} br_ssl_server_policy_dilithium_context;
+} br_ssl_server_policy_sphincs_p_context;
 
 /**
  * \brief Class type for a session parameter cache.
@@ -3661,7 +3661,7 @@ struct br_ssl_server_context_ {
 	/*
 	 * Hash functions supported by the client, with ECDSA and RSA
 	 * (bit mask). For hash function with id 'x', set bit index is
-	 * x for RSA, x+8 for ECDSA, x+32 for Dilithium. 
+	 * x for RSA, x+8 for ECDSA, x+32 for Sphincs. 
 	 * For newer algorithms, with ID 0x08**, bit 16+k is set for 
 	 * algorithm 0x0800+k.
 	 */
@@ -3686,7 +3686,7 @@ struct br_ssl_server_context_ {
 		const br_ssl_server_policy_class *vtable;
 		br_ssl_server_policy_rsa_context single_rsa;
 		br_ssl_server_policy_ec_context single_ec;
-		br_ssl_server_policy_dilithium_context single_dilithium;
+		br_ssl_server_policy_sphincs_p_context single_sphincs_p;
 	} chain_handler;
 
 	/*
@@ -3788,21 +3788,21 @@ void br_ssl_server_init_full_ec(br_ssl_server_context *cc,
 	unsigned cert_issuer_key_type, const br_ec_private_key *sk);
 
 /**
- * \brief SSL server profile: full_dilithium.
+ * \brief SSL server profile: full_sphincs_p.
  *
  * This function initialises the provided SSL server context with
- * all supported algorithms and cipher suites that rely on a Dilithium
+ * all supported algorithms and cipher suites that rely on a Sphincs
  * key pair.
  *
  *
  * \param cc                     server context to initialise.
  * \param chain                  server certificate chain.
  * \param chain_len              chain length (number of certificates).
- * \param sk                     Dilithium private key.
+ * \param sk                     Sphincs private key.
  */
-void br_ssl_server_init_full_dilithium(br_ssl_server_context *cc,
+void br_ssl_server_init_full_sphincs_p(br_ssl_server_context *cc,
 	const br_x509_certificate *chain, size_t chain_len,
-	const br_dilithium_private_key *sk);
+	const br_sphincs_p_private_key *sk);
 
 /**
  * \brief SSL server profile: minr2g.
@@ -4088,26 +4088,26 @@ void br_ssl_server_set_single_ec(br_ssl_server_context *cc,
 	const br_ec_impl *iec, br_ecdsa_sign iecdsa);
 	
 /**
- * \brief Set the server certificate chain and key (single Dilithium case).
+ * \brief Set the server certificate chain and key (single Sphincs case).
  *
  * This function uses a policy context included in the server context.
- * It configures use of a single server certificate chain with a Dilithium
+ * It configures use of a single server certificate chain with a Sphincs
  * private key.
  * 
  * Note that the random number generator MUST be initialised before calling 
- * the dilithium do sign method. 
+ * the sphincs_p do sign method. 
  *
  *
  * \param cc                     server context.
  * \param chain                  server certificate chain to send.
  * \param chain_len              chain length (number of certificates).
- * \param sk                     server private key (Dilithium).
- * \param idilithium             Dilithium signature implementation.
+ * \param sk                     server private key (Sphincs).
+ * \param isphincs_p             Sphincs signature implementation.
  * \param rnd             		 Random number generator.
  */
-void br_ssl_server_set_single_dilithium(br_ssl_server_context *cc,
+void br_ssl_server_set_single_sphincs_p(br_ssl_server_context *cc,
 	const br_x509_certificate *chain, size_t chain_len,
-	const br_dilithium_private_key *sk, br_dilithium_sign idilithium);
+	const br_sphincs_p_private_key *sk, br_sphincs_p_sign isphincs_p);
 
 /**
  * \brief Activate client certificate authentication.
@@ -4538,7 +4538,7 @@ int br_sslio_close(br_sslio_context *cc);
 
 /* Custom quantum-resistant suites  (Unassigned IANA mapping) */
 
-#define BR_TLS_KYBR_DLTHM_WITH_CHACHA20_POLY1305_SHA256   0xDEC0
+#define BR_TLS_KYBR_SPHINCS_WITH_CHACHA20_POLY1305_SHA256   0xDEC0
 
 /*
  * Symbolic constants for alerts.

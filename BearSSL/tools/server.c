@@ -377,7 +377,7 @@ sp_choose(const br_ssl_server_policy_class **pctx,
 			fprintf(stderr, "\n");
 		}
 		if ((chashes >> 25) != 0) {
-			fprintf(stderr, "      with Dilithium:");
+			fprintf(stderr, "      with Sphincs:");
 			print_hashes(chashes >> 25);
 			fprintf(stderr, "\n");
 		}
@@ -461,8 +461,8 @@ sp_choose(const br_ssl_server_policy_class **pctx,
 				goto choose_ok;
 			}
 			break;
-		case BR_SSLKEYX_KYBR_DLTHM:
-			if (pc->sk->key_type == BR_KEYTYPE_DLTHM) {
+		case BR_SSLKEYX_KYBR_SPHINCS:
+			if (pc->sk->key_type == BR_KEYTYPE_SPHINCS) {
 				choices->cipher_suite = st[u][0];
 				if (br_ssl_engine_get_version(&cc->eng)
 					< BR_TLS12)
@@ -472,7 +472,7 @@ sp_choose(const br_ssl_server_policy_class **pctx,
 				} else {
 					unsigned id;
 
-					id = choose_hash(chashes >> 25); // Dilithium hashes are shifted by 25
+					id = choose_hash(chashes >> 25); // Sphincs hashes are shifted by 25
 					if (pc->cbhash) {
 						choices->algo_id =
 							(id << 8) + 0x03;
@@ -524,8 +524,8 @@ sp_do_keyx(const br_ssl_server_policy_class **pctx,
 		memmove(data, data + xoff, xlen);
 		*len = xlen;
 		return r;
-	case BR_KEYTYPE_DLTHM:
-		fprintf(stderr, "ERROR: Dilithium key type can't be used for key exchanges\n");
+	case BR_KEYTYPE_SPHINCS:
+		fprintf(stderr, "ERROR: Sphincs key type can't be used for key exchanges\n");
 		return 0;
 	default:
 		fprintf(stderr, "ERROR: unknown private key type (%d)\n",
@@ -637,19 +637,19 @@ sp_do_sign(const br_ssl_server_policy_class **pctx,
 		}
 		return sig_len;
 	
-	case BR_KEYTYPE_DLTHM:
+	case BR_KEYTYPE_SPHINCS:
 		hc = get_hash_impl(algo_id);
 		if (hc == NULL) {
 			if (pc->verbose) {
-				fprintf(stderr, "ERROR: cannot Dilithium-sign with"
+				fprintf(stderr, "ERROR: cannot Sphincs-sign with"
 					" unknown hash function: %u\n",
 					algo_id);
 			}
 			return 0;
 		}
-		if (len < BR_DILITHIUM_SIGNATURE_SIZE(pc->sk->key.dilithium.mode)) {
+		if (len < BR_SPHINCS_P_SIGNATURE_SIZE(pc->sk->key.sphincs_p.mode)) {
 			if (pc->verbose) {
-				fprintf(stderr, "ERROR: cannot Dilithium-sign"
+				fprintf(stderr, "ERROR: cannot Sphincs-sign"
 					" (output buffer = %lu)\n",
 					(unsigned long)len);
 			}
@@ -666,10 +666,10 @@ sp_do_sign(const br_ssl_server_policy_class **pctx,
 			fprintf(stderr, "ERROR: system source of randomness failed\n");
 			return 0;
 		}
-		sig_len = br_dilithium_sign_get_default()(&rng.vtable, &pc->sk->key.dilithium, data, len, hv, hv_len);
+		sig_len = br_sphincs_p_sign_get_default()(&pc->sk->key.sphincs_p, data, len, hv, hv_len);
 		if (sig_len == 0) {
 			if (pc->verbose) {
-				fprintf(stderr, "ERROR: Dilithium-sign failure\n");
+				fprintf(stderr, "ERROR: Sphincs-sign failure\n");
 			}
 			return 0;
 		}
@@ -1044,7 +1044,7 @@ do_server(int argc, char *argv[])
 			goto server_exit_error;
 		}
 		break;
-	case BR_KEYTYPE_DLTHM:
+	case BR_KEYTYPE_SPHINCS:
 		break;
 	default:
 		fprintf(stderr, "ERROR: unsupported private key type (%d)\n",
@@ -1061,7 +1061,7 @@ do_server(int argc, char *argv[])
 		switch (cert_signer_algo) {
 		case BR_KEYTYPE_RSA: csas = "RSA"; break;
 		case BR_KEYTYPE_EC:  csas = "EC"; break;
-		case BR_KEYTYPE_DLTHM:  csas = "Dilithium"; break;
+		case BR_KEYTYPE_SPHINCS:  csas = "Sphincs"; break;
 		default:
 			csas = "unknown";
 			break;
@@ -1147,7 +1147,7 @@ do_server(int argc, char *argv[])
 		if ((req & (REQ_ECDHE_RSA | REQ_ECDHE_ECDSA)) != 0) {
 			br_ssl_engine_set_default_ec(&cc.eng);
 		}
-		if ((req & (REQ_KYBER_DLTHM)) != 0) {
+		if ((req & (REQ_KYBER_SPHINCS)) != 0) {
 			br_ssl_engine_set_default_kyber(&cc.eng);
 		}
 	}
@@ -1223,12 +1223,12 @@ do_server(int argc, char *argv[])
 		}
 		br_ssl_engine_set_default_rsavrfy(&cc.eng);
 		br_ssl_engine_set_default_ecdsa(&cc.eng);
-		br_ssl_engine_set_default_dilithium(&cc.eng);
+		br_ssl_engine_set_default_sphincs_p(&cc.eng);
 		br_x509_minimal_set_rsa(&xc, br_rsa_pkcs1_vrfy_get_default());
 		br_x509_minimal_set_ecdsa(&xc,
 			br_ec_get_default(), br_ecdsa_vrfy_asn1_get_default());
-		br_x509_minimal_set_dilithium(&xc, 
-			br_dilithium_vrfy_get_default());
+		br_x509_minimal_set_sphincs_p(&xc, 
+			br_sphincs_p_vrfy_get_default());
 		br_ssl_engine_set_x509(&cc.eng, &xc.vtable);
 		br_ssl_server_set_trust_anchor_names_alt(&cc,
 			&VEC_ELT(anchors, 0), VEC_LEN(anchors));

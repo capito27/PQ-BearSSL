@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "hash_map": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "inner.h": "c",
+        "oqs.h": "c"
     }
 }
