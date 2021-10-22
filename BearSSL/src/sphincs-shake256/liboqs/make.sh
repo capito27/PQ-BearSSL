@@ -8,4 +8,5 @@ ninja
 
 cd lib
 
-ar -x liboqs.a
+#ar -x liboqs.a
+

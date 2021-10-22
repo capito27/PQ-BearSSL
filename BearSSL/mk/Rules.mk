@@ -383,7 +383,6 @@ $(OBJDIR):
 
 $(BEARSSLLIB): $(OBJDIR) $(OBJ)
 	$(AR) $(ARFLAGS) $(AROUT)$(BEARSSLLIB) $(OBJ)
-	$(AR) $(ARFLAGS) $(AROUT)$(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)*.o
 
 $(BEARSSLDLL): $(OBJDIR) $(OBJ)
 	$(LDDLL) $(LDDLLFLAGS) $(LDDLLOUT)$(BEARSSLDLL) $(OBJ) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a

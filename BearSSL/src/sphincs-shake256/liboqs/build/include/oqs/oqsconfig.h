@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #define OQS_VERSION_TEXT "0.7.0"
-#define OQS_COMPILE_BUILD_TARGET "x86_64-Linux-5.13.15-1-MANJARO"
+#define OQS_COMPILE_BUILD_TARGET "x86_64-Linux-5.14.10-1-MANJARO"
 #define OQS_DIST_BUILD 1
 #define OQS_DIST_X86_64_BUILD 1
 /* #undef OQS_DIST_X86_BUILD */
