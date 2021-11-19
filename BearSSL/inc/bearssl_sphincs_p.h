@@ -181,8 +181,23 @@ br_sphincs_p_vrfy br_sphincs_p_vrfy_get_default(void);
 #define shake256_256s_robust 10
 #define shake256_256s_simple 11
 
+#define sha256_128f_robust 12 
+#define sha256_128f_simple 13
+#define sha256_128s_robust 14
+#define sha256_128s_simple 15
+
+#define sha256_192f_robust 16
+#define sha256_192f_simple 17
+#define sha256_192s_robust 18
+#define sha256_192s_simple 19
+
+#define sha256_256f_robust 20
+#define sha256_256f_simple 21
+#define sha256_256s_robust 22
+#define sha256_256s_simple 23
+
 /**
- * \brief SPHINCS+ largest operating modes
+ * \brief SPHINCS+ largest operating modes (inner hash function is irrelevant)
  */
 #define SPHINCS_P_MAX_SIZE_MODE shake256_256f_robust
 /**
@@ -223,12 +238,12 @@ br_sphincs_p_vrfy br_sphincs_p_vrfy_get_default(void);
  * \return the length of buffer able to hold the signature.
  */
 #define BR_SPHINCS_P_SIGNATURE_SIZE(mode)   ((size_t)( \
-    (((mode) / 2) == 0) ? 17088 : ( \
-    (((mode) / 2) == 1) ?  7856 : ( \
-    (((mode) / 2) == 2) ? 35664 : ( \
-    (((mode) / 2) == 3) ? 16224 : ( \
-    (((mode) / 2) == 4) ? 49856 : ( \
-    (((mode) / 2) == 5) ? 29792 : ( \
+    (((mode) / 2) % 6 == 0) ? 17088 : ( \
+    (((mode) / 2) % 6 == 1) ?  7856 : ( \
+    (((mode) / 2) % 6 == 2) ? 35664 : ( \
+    (((mode) / 2) % 6 == 3) ? 16224 : ( \
+    (((mode) / 2) % 6 == 4) ? 49856 : ( \
+    (((mode) / 2) % 6 == 5) ? 29792 : ( \
     -1))))))))
 
 /**

@@ -254,12 +254,12 @@ coresrc=" \
 	src/rsa/rsa_pss_sig_pad.c \
 	src/rsa/rsa_pss_sig_unpad.c \
 	src/rsa/rsa_ssl_decrypt.c \
-	src/sphincs-shake256/sphincs_default_keygen.c \
-	src/sphincs-shake256/sphincs_default_sign.c \
-	src/sphincs-shake256/sphincs_default_verify.c \
-	src/sphincs-shake256/sphincs_wrap_keygen.c \
-	src/sphincs-shake256/sphincs_wrap_sign.c \
-	src/sphincs-shake256/sphincs_wrap_verify.c \
+	src/sphincs/sphincs_default_keygen.c \
+	src/sphincs/sphincs_default_sign.c \
+	src/sphincs/sphincs_default_verify.c \
+	src/sphincs/sphincs_wrap_keygen.c \
+	src/sphincs/sphincs_wrap_sign.c \
+	src/sphincs/sphincs_wrap_verify.c \
 	src/ssl/prf.c \
 	src/ssl/prf_md5sha1.c \
 	src/ssl/prf_sha256.c \
@@ -555,22 +555,21 @@ clean:
 
 \$(BEARSSLLIB): \$(OBJDIR) \$(OBJ)
 	\$(AR) \$(ARFLAGS) \$(AROUT)\$(BEARSSLLIB) \$(OBJ)
-	\$(AR) \$(ARFLAGS) \$(AROUT)\$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)*.o
 
 \$(BEARSSLDLL): \$(OBJDIR) \$(OBJ)
-	\$(LDDLL) \$(LDDLLFLAGS) \$(LDDLLOUT)\$(BEARSSLDLL) \$(OBJ) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
+	\$(LDDLL) \$(LDDLLFLAGS) \$(LDDLLOUT)\$(BEARSSLDLL) \$(OBJ) src\$(P)sphincs\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(BRSSL): \$(BEARSSLLIB) \$(OBJBRSSL)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(BRSSL) \$(OBJBRSSL) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(BRSSL) \$(OBJBRSSL) \$(BEARSSLLIB) src\$(P)sphincs\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(TESTCRYPTO): \$(BEARSSLLIB) \$(OBJTESTCRYPTO)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTCRYPTO) \$(OBJTESTCRYPTO) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTCRYPTO) \$(OBJTESTCRYPTO) \$(BEARSSLLIB) src\$(P)sphincs\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(TESTSPEED): \$(BEARSSLLIB) \$(OBJTESTSPEED)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTSPEED) \$(OBJTESTSPEED) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTSPEED) \$(OBJTESTSPEED) \$(BEARSSLLIB) src\$(P)sphincs\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 
 \$(TESTX509): \$(BEARSSLLIB) \$(OBJTESTX509)
-	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTX509) \$(OBJTESTX509) \$(BEARSSLLIB) src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
+	\$(LD) \$(LDFLAGS) \$(LDOUT)\$(TESTX509) \$(OBJTESTX509) \$(BEARSSLLIB) src\$(P)sphincs\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
 EOF
 
 (for f in $coresrc ; do
@@ -580,7 +579,7 @@ EOF
 done
 
 for f in $toolssrc ; do
-	b="$(basename "$f" .c)\$O"src\$(P)sphincs-shake256\$(P)liboqs\$(P)build\$(P)lib\$(P)liboqs.a
+	b="$(basename "$f" .c)\$O"
 	g="$(escsep "$f")"
 	printf '\n$(OBJDIR)$P%s: %s $(HEADERSTOOLS)\n\t$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$P%s %s\n' "$b" "$g" "$b" "$g"
 done

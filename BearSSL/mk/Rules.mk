@@ -385,19 +385,19 @@ $(BEARSSLLIB): $(OBJDIR) $(OBJ)
 	$(AR) $(ARFLAGS) $(AROUT)$(BEARSSLLIB) $(OBJ)
 
 $(BEARSSLDLL): $(OBJDIR) $(OBJ)
-	$(LDDLL) $(LDDLLFLAGS) $(LDDLLOUT)$(BEARSSLDLL) $(OBJ) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
+	$(LDDLL) $(LDDLLFLAGS) $(LDDLLOUT)$(BEARSSLDLL) $(OBJ) src$(P)sphincs$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(BRSSL): $(BEARSSLLIB) $(OBJBRSSL)
-	$(LD) $(LDFLAGS) $(LDOUT)$(BRSSL) $(OBJBRSSL) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
+	$(LD) $(LDFLAGS) $(LDOUT)$(BRSSL) $(OBJBRSSL) $(BEARSSLLIB) src$(P)sphincs$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(TESTCRYPTO): $(BEARSSLLIB) $(OBJTESTCRYPTO)
-	$(LD) $(LDFLAGS) $(LDOUT)$(TESTCRYPTO) $(OBJTESTCRYPTO) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
+	$(LD) $(LDFLAGS) $(LDOUT)$(TESTCRYPTO) $(OBJTESTCRYPTO) $(BEARSSLLIB) src$(P)sphincs$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(TESTSPEED): $(BEARSSLLIB) $(OBJTESTSPEED)
-	$(LD) $(LDFLAGS) $(LDOUT)$(TESTSPEED) $(OBJTESTSPEED) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
+	$(LD) $(LDFLAGS) $(LDOUT)$(TESTSPEED) $(OBJTESTSPEED) $(BEARSSLLIB) src$(P)sphincs$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(TESTX509): $(BEARSSLLIB) $(OBJTESTX509)
-	$(LD) $(LDFLAGS) $(LDOUT)$(TESTX509) $(OBJTESTX509) $(BEARSSLLIB) src$(P)sphincs-shake256$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
+	$(LD) $(LDFLAGS) $(LDOUT)$(TESTX509) $(OBJTESTX509) $(BEARSSLLIB) src$(P)sphincs$(P)liboqs$(P)build$(P)lib$(P)liboqs.a
 
 $(OBJDIR)$Psettings$O: src$Psettings.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psettings$O src$Psettings.c
@@ -1014,23 +1014,23 @@ $(OBJDIR)$Prsa_pss_sig_unpad$O: src$Prsa$Prsa_pss_sig_unpad.c $(HEADERSPRIV)
 $(OBJDIR)$Prsa_ssl_decrypt$O: src$Prsa$Prsa_ssl_decrypt.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Prsa_ssl_decrypt$O src$Prsa$Prsa_ssl_decrypt.c
 
-$(OBJDIR)$Psphincs_default_keygen$O: src$Psphincs-shake256$Psphincs_default_keygen.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_keygen$O src$Psphincs-shake256$Psphincs_default_keygen.c
+$(OBJDIR)$Psphincs_default_keygen$O: src$Psphincs$Psphincs_default_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_keygen$O src$Psphincs$Psphincs_default_keygen.c
 
-$(OBJDIR)$Psphincs_default_sign$O: src$Psphincs-shake256$Psphincs_default_sign.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_sign$O src$Psphincs-shake256$Psphincs_default_sign.c
+$(OBJDIR)$Psphincs_default_sign$O: src$Psphincs$Psphincs_default_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_sign$O src$Psphincs$Psphincs_default_sign.c
 
-$(OBJDIR)$Psphincs_default_verify$O: src$Psphincs-shake256$Psphincs_default_verify.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_verify$O src$Psphincs-shake256$Psphincs_default_verify.c
+$(OBJDIR)$Psphincs_default_verify$O: src$Psphincs$Psphincs_default_verify.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_default_verify$O src$Psphincs$Psphincs_default_verify.c
 
-$(OBJDIR)$Psphincs_wrap_keygen$O: src$Psphincs-shake256$Psphincs_wrap_keygen.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_keygen$O src$Psphincs-shake256$Psphincs_wrap_keygen.c
+$(OBJDIR)$Psphincs_wrap_keygen$O: src$Psphincs$Psphincs_wrap_keygen.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_keygen$O src$Psphincs$Psphincs_wrap_keygen.c
 
-$(OBJDIR)$Psphincs_wrap_sign$O: src$Psphincs-shake256$Psphincs_wrap_sign.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_sign$O src$Psphincs-shake256$Psphincs_wrap_sign.c
+$(OBJDIR)$Psphincs_wrap_sign$O: src$Psphincs$Psphincs_wrap_sign.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_sign$O src$Psphincs$Psphincs_wrap_sign.c
 
-$(OBJDIR)$Psphincs_wrap_verify$O: src$Psphincs-shake256$Psphincs_wrap_verify.c $(HEADERSPRIV)
-	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_verify$O src$Psphincs-shake256$Psphincs_wrap_verify.c
+$(OBJDIR)$Psphincs_wrap_verify$O: src$Psphincs$Psphincs_wrap_verify.c $(HEADERSPRIV)
+	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Psphincs_wrap_verify$O src$Psphincs$Psphincs_wrap_verify.c
 
 $(OBJDIR)$Pprf$O: src$Pssl$Pprf.c $(HEADERSPRIV)
 	$(CC) $(CFLAGS) $(INCFLAGS) $(CCOUT)$(OBJDIR)$Pprf$O src$Pssl$Pprf.c
