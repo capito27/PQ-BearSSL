@@ -211,7 +211,7 @@ br_sphincs_p_vrfy br_sphincs_p_vrfy_get_default(void);
  * \param mode   target SPHINCS+ operation mode, guaranteed valid from 0 to 11 (included)
  * \return  the length of the public key polynomial vector buffer, in bytes.
  */
-#define BR_SPHINCS_P_PUBLIC_BUFF_SIZE(mode)     ((((mode) / 4) + 2) * 16)
+#define BR_SPHINCS_P_PUBLIC_BUFF_SIZE(mode)     (((((mode) % 12) / 4) + 2) * 16)
 
 /**
  * \brief Get buffer size to hold a SPHINCS+ secret key.
@@ -224,7 +224,7 @@ br_sphincs_p_vrfy br_sphincs_p_vrfy_get_default(void);
  * \param mode   target SPHINCS+ operation mode,  guaranteed valid from 0 to 11 (included)
  * \return  the length of the private key polynomial vector buffer, in bytes.
  */
-#define BR_SPHINCS_P_SECRET_BUFF_SIZE(mode)   ((((mode) / 4) + 2) * 32)
+#define BR_SPHINCS_P_SECRET_BUFF_SIZE(mode)   (((((mode) % 12) / 4) + 2) * 32)
 
 /**
  * \brief Get the buffer size to hold SPHINCS+ signatures
